@@ -1,0 +1,18 @@
+{
+  "name": "@null-402/circuits",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Circom payment circuit for null-402 (Groth16 over BN254). Scripts are .mjs (ESM); circom's generated witness JS is CommonJS, so the package stays CJS-default.",
+  "scripts": {
+    "build": "bash build.sh",
+    "gen-input": "node scripts/gen-input.mjs",
+    "verify": "snarkjs groth16 verify build/verification_key.json build/public.json build/proof.json"
+  },
+  "dependencies": {
+    "circomlib": "^2.0.5"
+  },
+  "devDependencies": {
+    "circomlibjs": "^0.1.7",
+    "snarkjs": "^0.7.5"
+  }
+}

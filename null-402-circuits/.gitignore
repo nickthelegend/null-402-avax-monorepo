@@ -1,0 +1,11 @@
+.DS_Store
+node_modules/
+# circom / snarkjs build artifacts
+build/
+*.r1cs
+*.sym
+*.wasm
+*.zkey
+*.ptau
+witness.wtns
+verification_key.json

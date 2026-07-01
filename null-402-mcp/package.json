@@ -1,0 +1,21 @@
+{
+  "name": "null-402-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "MCP server that lets any agent pay x402 APIs privately on Avalanche via null-402.",
+  "bin": { "null-402-mcp": "src/index.mjs" },
+  "scripts": {
+    "start": "node src/index.mjs",
+    "selftest": "node src/selftest.mjs",
+    "agent": "node src/agent.mjs",
+    "agent:groq": "node src/groq-agent.mjs"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.0",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "null-402": "file:../null-402-sdk",
+    "viem": "^2.21.0",
+    "zod": "^3.23.0"
+  }
+}

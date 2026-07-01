@@ -1,0 +1,29 @@
+# dependencies
+**/node_modules/
+**/.pnp
+**/.pnp.js
+
+# builds / artifacts
+**/dist/
+**/build/
+**/out/
+**/.next/
+**/target/
+**/coverage/
+**/*.tsbuildinfo
+
+# secrets / keys / wallets — never commit
+**/.env
+**/.env.*
+!**/.env.example
+**/wallet.json
+**/*.wallet.json
+**/.null-402/
+**/*.secret
+.gh_token
+.groq_key
+
+# os / editor
+.DS_Store
+**/.DS_Store
+*.log

@@ -1,0 +1,6 @@
+.DS_Store
+# Rust / Soroban
+target/
+Cargo.lock
+**/*.rs.bk
+*.wasm

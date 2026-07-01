@@ -1,0 +1,10 @@
+{
+  "name": "null-402-examples",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Runnable end-to-end examples for null-402.",
+  "scripts": {
+    "demo": "node e2e-demo.mjs"
+  }
+}

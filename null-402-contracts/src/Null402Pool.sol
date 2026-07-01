@@ -1,0 +1,119 @@
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.27;
+
+/// Minimal ERC-20 surface the pool needs (escrow in, pay provider out).
+interface IERC20 {
+    function transfer(address to, uint256 amount) external returns (bool);
+    function transferFrom(address from, address to, uint256 amount) external returns (bool);
+    function balanceOf(address a) external view returns (uint256);
+}
+
+/// The Groth16 verifier exported from the null-402 payment circuit (snarkjs).
+/// Public signals order: [nullifier, merkleRoot, payTo, requiredAmount, contextHash].
+interface IGroth16Verifier {
+    function verifyProof(
+        uint256[2] calldata a,
+        uint256[2][2] calldata b,
+        uint256[2] calldata c,
+        uint256[5] calldata pubSignals
+    ) external view returns (bool);
+}
+
+/// @title Null402Pool — the shielded pay-per-call pool (Avalanche EVM port of the
+/// Soroban `pool` contract).
+/// @notice An agent escrows an ERC-20 into the pool, committing a private note
+/// (a Poseidon commitment; the Merkle tree of commitments is built off-chain).
+/// To pay per API call it generates a Groth16 proof that it owns an unspent note
+/// ≥ price, bound to the recipient + request. The operator then `settle`s: the
+/// proof is verified on-chain, the nullifier is burned (single-use), and the
+/// provider is paid. Only the nullifier and `valid:true` ever touch the chain —
+/// no wallet, amount, or endpoint is revealed.
+contract Null402Pool {
+    IERC20 public immutable token;
+    IGroth16Verifier public immutable verifier;
+    address public operator;
+
+    /// Poseidon note commitments, in deposit order. The off-chain client builds
+    /// the Merkle tree/root from this list (no on-chain Poseidon needed).
+    uint256[] public commitments;
+
+    /// Spent nullifiers (double-spend / replay guard). Key = public signal[0].
+    mapping(uint256 => bool) public spent;
+
+    event Deposit(uint256 indexed index, uint256 commitment, address indexed from, uint256 amount);
+    event Settle(uint256 indexed nullifier, address indexed recipient, uint256 amount);
+    event OperatorChanged(address indexed operator);
+
+    error NotOperator();
+    error ZeroAmount();
+    error InvalidProof();
+    error NullifierSpent();
+
+    modifier onlyOperator() {
+        if (msg.sender != operator) revert NotOperator();
+        _;
+    }
+
+    constructor(IERC20 _token, IGroth16Verifier _verifier, address _operator) {
+        token = _token;
+        verifier = _verifier;
+        operator = _operator;
+    }
+
+    /// @notice Escrow `amount` and record a note `commitment`. Returns the leaf
+    /// index (the note's position in the commitment list) for off-chain Merkle
+    /// witness building.
+    function deposit(uint256 commitment, uint256 amount) external returns (uint256 index) {
+        if (amount == 0) revert ZeroAmount();
+        require(token.transferFrom(msg.sender, address(this), amount), "transfer failed");
+        index = commitments.length;
+        commitments.push(commitment);
+        emit Deposit(index, commitment, msg.sender, amount);
+    }
+
+    /// @notice Settle a verified payment: verify the proof, burn the nullifier,
+    /// and pay the provider. Operator-gated (the operator is trusted to only
+    /// settle proofs whose merkleRoot it recognizes as a real pool root).
+    /// @param a,b,c        Groth16 proof points.
+    /// @param pubSignals   [nullifier, merkleRoot, payTo, requiredAmount, contextHash].
+    /// @param recipient    Provider address to pay.
+    /// @param amount       Amount to pay the provider from the pool.
+    function settle(
+        uint256[2] calldata a,
+        uint256[2][2] calldata b,
+        uint256[2] calldata c,
+        uint256[5] calldata pubSignals,
+        address recipient,
+        uint256 amount
+    ) external onlyOperator {
+        // 1) cryptographic validity
+        if (!verifier.verifyProof(a, b, c, pubSignals)) revert InvalidProof();
+
+        // 2) single-use nullifier
+        uint256 nullifier = pubSignals[0];
+        if (spent[nullifier]) revert NullifierSpent();
+        spent[nullifier] = true;
+
+        // 3) payout
+        require(token.transfer(recipient, amount), "payout failed");
+        emit Settle(nullifier, recipient, amount);
+    }
+
+    // ── views ─────────────────────────────────────────────────────────────────
+    function commitmentCount() external view returns (uint256) {
+        return commitments.length;
+    }
+
+    function allCommitments() external view returns (uint256[] memory) {
+        return commitments;
+    }
+
+    function isSpent(uint256 nullifier) external view returns (bool) {
+        return spent[nullifier];
+    }
+
+    function setOperator(address o) external onlyOperator {
+        operator = o;
+        emit OperatorChanged(o);
+    }
+}

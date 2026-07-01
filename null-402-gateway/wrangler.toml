@@ -1,0 +1,31 @@
+name = "null-402-gateway"
+main = "src/index.ts"
+compatibility_date = "2024-07-25"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+# null-402 / Stellar configuration
+PAYMENT_PAYTO = "REPLACE_WITH_GATEWAY_ACCOUNT_OR_CONTRACT"
+STELLAR_RPC_URL = "https://soroban-testnet.stellar.org"
+STELLAR_NETWORK = "testnet"
+POOL_CONTRACT_ID = "REPLACE_WITH_POOL_CONTRACT_ID"
+# Live testnet verifier (deployed + init'd with the circuit vk). Replace for your own.
+VERIFIER_CONTRACT_ID = "CDCYYFSJ7QC7RO6L2DHWK6X6IMZ5U5J3IEAKLKTBTBDX45LWO32JQJLV"
+# Funded account public key used only to simulate the verifier (read-only, no signing).
+STELLAR_SOURCE_ACCOUNT = "REPLACE_WITH_A_FUNDED_TESTNET_ACCOUNT_G..."
+# "soroban" = real on-chain ZK verification. "dev" = insecure local scaffold.
+VERIFY_MODE = "dev"
+
+# Run: CLOUDFLARE_API_TOKEN=<token> npx wrangler kv namespace create PAYMENT_KV
+# Then paste the returned id below (use the same id for both fields)
+[[kv_namespaces]]
+binding = "PAYMENT_KV"
+id = "REPLACE_WITH_KV_ID"
+preview_id = "REPLACE_WITH_KV_ID"
+
+# Secrets (set via `wrangler secret put`):
+#   DEV_SHARED_SECRET   — dev verifier secret (Phase 1 only)
+#   CMC_API_KEY         — optional, for real upstream price data
+
+[observability]
+enabled = true

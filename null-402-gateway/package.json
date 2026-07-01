@@ -1,0 +1,23 @@
+{
+  "name": "@null-402/gateway",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test:http": "tsx test/http.test.mts"
+  },
+  "dependencies": {
+    "hono": "^4.4.7",
+    "null-402": "file:../null-402-sdk"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260426.1",
+    "tsx": "^4.22.4",
+    "typescript": "^5.5.3",
+    "wrangler": "^3.65.0"
+  }
+}

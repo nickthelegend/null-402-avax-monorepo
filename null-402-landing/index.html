@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>null-402 — private pay-per-call on Stellar</title>
+  <meta name="description" content="x402 with zero-knowledge payment proofs on Stellar. No wallet, amount, or endpoint revealed — only a nullifier and a valid boolean." />
+  <style>
+    :root {
+      --bg: #020617; --panel: #0f172a; --panel2: #1e293b;
+      --line: #1e293b; --text: #e2e8f0; --muted: #94a3b8; --dim: #64748b;
+      --violet: #8b5cf6; --violet-bg: #2e1065; --red: #f87171; --green: #34d399;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: inherit; }
+    .wrap { max-width: 920px; margin: 0 auto; padding: 0 20px; }
+    code, .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+
+    header { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px); background: rgba(15,23,42,.8); border-bottom: 1px solid var(--line); }
+    .nav { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; max-width: 920px; margin: 0 auto; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+    .logo { width: 28px; height: 28px; border-radius: 8px; background: var(--violet); display: grid; place-items: center; font-weight: 700; color: #fff; }
+    .tag { font-size: 12px; color: #c4b5fd; background: var(--violet-bg); padding: 2px 9px; border-radius: 999px; }
+    .nav a.link { color: var(--muted); text-decoration: none; font-size: 13px; margin-left: 16px; }
+    .nav a.link:hover { color: var(--text); }
+
+    .hero { text-align: center; padding: 80px 0 40px; }
+    .hero h1 { font-size: clamp(32px, 6vw, 52px); font-weight: 800; letter-spacing: -.02em; line-height: 1.05; }
+    .hero h1 .accent { color: var(--violet); }
+    .hero p { color: var(--muted); max-width: 620px; margin: 18px auto 0; font-size: 18px; }
+    .cta { margin-top: 28px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn { text-decoration: none; font-size: 14px; font-weight: 600; padding: 11px 20px; border-radius: 12px; }
+    .btn.primary { background: var(--violet); color: #fff; }
+    .btn.primary:hover { background: #7c3aed; }
+    .btn.ghost { border: 1px solid var(--line); color: var(--text); }
+    .btn.ghost:hover { border-color: var(--violet); }
+
+    .chips { margin-top: 30px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+    .chip { font-size: 12px; color: var(--text); background: var(--panel2); padding: 6px 12px; border-radius: 999px; }
+
+    .flow { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 40px 0; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+    .card.bad { border-color: #7f1d1d; background: #1f0a0a55; }
+    .card.good { border-color: #5b21b6; background: #2e106555; }
+    .card h3 { font-size: 14px; margin-bottom: 10px; }
+    .card.bad h3 { color: var(--red); }
+    .card.good h3 { color: #c4b5fd; }
+    .card .mono { font-size: 13px; color: var(--text); display: block; line-height: 1.7; }
+    .card small { color: var(--dim); display: block; margin-top: 10px; font-size: 12.5px; }
+    .leak { color: var(--red); } .keep { color: var(--violet); } .ok { color: var(--green); }
+
+    section.block { padding: 30px 0; }
+    section.block h2 { font-size: 22px; margin-bottom: 6px; }
+    section.block .sub { color: var(--muted); margin-bottom: 22px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { text-align: left; padding: 11px 12px; border-bottom: 1px solid var(--line); }
+    th { color: var(--dim); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+    td.x { color: var(--red); } td.c { color: var(--green); }
+
+    .repos { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .repo { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+    .repo .name { font-weight: 600; font-size: 14px; }
+    .repo .what { color: var(--muted); font-size: 13px; margin-top: 4px; }
+    .repo .stk { color: var(--violet); font-size: 12px; margin-top: 6px; }
+
+    footer { border-top: 1px solid var(--line); margin-top: 40px; padding: 26px 0; text-align: center; color: var(--dim); font-size: 13px; }
+    @media (max-width: 680px) { .flow, .repos { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="nav">
+      <div class="brand">
+        <span class="logo">∅</span>
+        <span>null-402</span>
+        <span class="tag">ZK payments on Stellar</span>
+      </div>
+      <nav>
+        <a class="link" href="https://github.com/kato9292929/Arcium">GitHub</a>
+        <a class="link" href="https://x402.org">x402</a>
+        <a class="link" href="https://developers.stellar.org/docs/build/apps/privacy">Stellar privacy</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <h1>API payments.<br /><span class="accent">Nothing leaks.</span></h1>
+      <p>
+        x402 broadcasts who paid, how much, and which API they hit. <strong>null-402</strong>
+        replaces the payment with a zero-knowledge proof verified on Stellar — only a one-time
+        nullifier and a <span class="mono ok">valid: true</span> ever appear.
+      </p>
+      <div class="cta">
+        <a class="btn primary" href="#start">Get started</a>
+        <a class="btn ghost" href="https://github.com/kato9292929/Arcium">View source</a>
+      </div>
+      <div class="chips">
+        <span class="chip">🔒 Sender hidden</span>
+        <span class="chip">🔒 Amount hidden</span>
+        <span class="chip">🔒 Endpoint hidden</span>
+        <span class="chip">🔒 Frequency hidden</span>
+        <span class="chip">✓ Validity provable on-chain</span>
+      </div>
+    </section>
+
+    <section class="flow">
+      <div class="card bad">
+        <h3>Standard x402 (public)</h3>
+        <span class="mono">Agent → 402 → <span class="leak">token transfer (on-chain)</span> → API</span>
+        <small>Sender, amount, and endpoint are permanently indexable by anyone.</small>
+      </div>
+      <div class="card good">
+        <h3>null-402 (private)</h3>
+        <span class="mono">Agent → 402 → <span class="keep">Groth16 proof on Stellar</span> → API</span>
+        <small>Proof generated client-side; secrets never leave the device.</small>
+      </div>
+    </section>
+
+    <section class="block">
+      <h2>What stays private</h2>
+      <p class="sub">A shielded pool + on-chain Groth16 verification — real privacy, not a public transfer with a label.</p>
+      <table>
+        <thead><tr><th>Data field</th><th>Standard x402</th><th>null-402</th></tr></thead>
+        <tbody>
+          <tr><td>Sender account</td><td class="x">✗ public</td><td class="c">✓ hidden</td></tr>
+          <tr><td>Exact amount</td><td class="x">✗ public</td><td class="c">✓ proven ≥ price</td></tr>
+          <tr><td>API endpoint</td><td class="x">✗ logged</td><td class="c">✓ bound in proof, unlogged</td></tr>
+          <tr><td>Access frequency</td><td class="x">✗ indexable</td><td class="c">✓ nullifier ≠ identity</td></tr>
+          <tr><td>Payment valid</td><td class="c">✓</td><td class="c">✓ on-chain Groth16</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="block" id="start">
+      <h2>The stack</h2>
+      <p class="sub">Each piece is its own repo. Circom + Groth16 over BN254, Poseidon Merkle tree, Soroban verifier.</p>
+      <div class="repos">
+        <div class="repo"><div class="name">null-402-sdk</div><div class="what">Server gate + client prover. <span class="mono">verifyPayment</span>, <span class="mono">Null402Client</span>.</div><div class="stk">TypeScript · snarkjs</div></div>
+        <div class="repo"><div class="name">null-402-contracts</div><div class="what">Soroban shielded pool + Groth16 verifier.</div><div class="stk">Rust · BN254 · Poseidon</div></div>
+        <div class="repo"><div class="name">null-402-circuits</div><div class="what">Circom payment circuit — proof of valid note spend.</div><div class="stk">Circom · Groth16</div></div>
+        <div class="repo"><div class="name">null-402-gateway</div><div class="what">Reference edge gateway built on the SDK.</div><div class="stk">Cloudflare Workers · Hono</div></div>
+        <div class="repo"><div class="name">null-402-dashboard</div><div class="what">Live demo — public vs private, side by side.</div><div class="stk">Next.js 15 · React 19</div></div>
+        <div class="repo"><div class="name">null-402-landing</div><div class="what">This page.</div><div class="stk">Static HTML</div></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    null-402 — private pay-per-call · Stellar · Groth16 · MIT
+  </footer>
+</body>
+</html>

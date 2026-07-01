@@ -1,0 +1,7 @@
+node_modules/
+package-lock.json
+# never commit wallets / secrets
+wallet.json
+.null-402/
+*.wallet.json
+.env

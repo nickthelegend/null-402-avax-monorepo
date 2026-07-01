@@ -1,0 +1,9 @@
+{
+  "network": "fuji",
+  "chainId": 43113,
+  "rpc": "https://api.avax-test.network/ext/bc/C/rpc",
+  "verifier": "0x0b44836dDc460f589ce4EB97f276e533A2bE6060",
+  "token": "0xabea27277b0189c4C054020Ea609060A9292Ee9C",
+  "pool": "0x3f528ab5A5e258f75692A3A9F4441D1E54eBB511",
+  "operator": "0x86076053d71E1c95b3c08e68BA39049024D69E67"
+}

@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Tailwind v4 dark mode via class strategy */

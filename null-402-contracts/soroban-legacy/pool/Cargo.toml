@@ -1,0 +1,18 @@
+[package]
+name = "null402-pool"
+version = "0.0.1"
+edition = "2021"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+soroban-sdk = { workspace = true }
+
+[dev-dependencies]
+# Only the tests link the verifier crate (to register the real contract). Linking
+# it in [dependencies] would compile the verifier's #[contractimpl] exports into
+# the pool wasm and collide with the pool's own functions.
+soroban-sdk = { workspace = true, features = ["testutils"] }
+null402-verifier = { path = "../verifier" }

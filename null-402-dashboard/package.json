@@ -1,0 +1,27 @@
+{
+  "name": "dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "^14.0.0",
+    "@tailwindcss/postcss": "^4.2.4",
+    "next": "^15.0.0",
+    "null-402": "file:../null-402-sdk",
+    "postcss": "^8.5.13",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwindcss": "^4.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.5.3"
+  }
+}
