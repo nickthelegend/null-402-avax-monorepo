@@ -1,38 +1,37 @@
 # null-402 — TODO
 
-Working checklist. See [ROADMAP.md](ROADMAP.md) for the full plan.
-**Do not commit until the owner says so.**
+Status of the Avalanche (Fuji) migration. ✓ = done & verified on-chain / in tests.
 
-## ✅ Done — Phase 1 (dev-mode end-to-end)
-- [x] `null-402-sdk`: `npm install` → `npm run build` (tsc clean, emits dist/)
-- [x] `null-402-sdk`: `npm test` — 7/7 (happy, replay, no-payment, wrong-recipient,
-      insufficient-amount, context-mismatch, tampered-proof)
-- [x] `null-402-gateway`: `npm install` → `npm run typecheck` (clean)
-- [x] `null-402-dashboard`: `npm install` → `npm run typecheck` (clean)
-- [x] `null-402-gateway`: `npm run test:http` — 4/4 (402 → proof → 200 → replay)
+## Contracts (Solidity / Foundry)
+- [x] `Groth16Verifier.sol` exported from the payment circuit (snarkjs)
+- [x] `Null402Pool.sol` — deposit + settle (verify → burn nullifier → pay)
+- [x] `MockUSD.sol` escrow/payout ERC-20
+- [x] Foundry tests: real proof on-chain, settle, replay, auth, tamper — **5/5**
+- [x] Deploy script + deployed to Fuji (verifier / pool / nUSD)
 
-## 🔴 Now — Phase 2 (real ZK)
-- [x] `null-402-circuits/payment.circom` — membership + value≥price + nullifier + context
-- [x] circuits: compile, Powers-of-Tau, groth16 setup, verifying key — **proof verifies**
-- [x] SDK `groth16Prover` (snarkjs) + `localGroth16Verifier` — **real-proof test 4/4**
-- [x] `null-402-contracts/verifier` — BN254 Groth16 pairing — **host test verifies real proof** (`cargo test`)
-- [x] host-fn status: BN254 ✓ in soroban-sdk 26.1.0; **Poseidon NOT exposed yet**. target `wasm32v1-none`
-- [x] **deploy verifier to testnet** (`CDCYYFSJ…`), init vk; verifies real proof on-chain (CLI)
-- [x] SDK `sorobanVerifier` (Avalanche RPC simulate) — **live testnet 2/2** (`npm run test:soroban`)
-- [x] `null-402-contracts/pool` — deposit/escrow + on-chain nullifier set + cross-contract `settle`. **5 tests** (`cargo test` = 10/10 with verifier)
-- [x] gateway `VERIFY_MODE=soroban` end-to-end (gateway-managed `KNOWN_ROOTS` + KV nullifiers)
-- [x] **e2e demo** `null-402-examples/e2e-demo.mjs` — real proof → gateway → on-chain verify; privacy assertion held; replay/tamper/wrong-recipient rejected
-- [ ] (optional) dashboard real in-browser proving; fully-trustless on-chain tree when Poseidon host fn ships
+## SDK (viem)
+- [x] `evm.ts`: `poolDeposit` / `poolCommitments` / `poolSettle`
+- [x] `evmVerifier` (on-chain verify via `eth_call`)
+- [x] Removed `@stellar/stellar-sdk`; circuit/prover/witness code reused as-is
+- [x] flow.test 7/7 · real-proof.test 4/4 · evm-live (verify + settle on Fuji) ✓
 
-## 🟢 Later — Phase 3/4
-- [ ] deploy verifier + pool to testnet; `VERIFY_MODE=soroban`
-- [ ] dashboard: real browser proving + deposit/pay UX
-- [ ] security review (replay, root window, context binding, DoS, malformed proofs)
-- [ ] publish `null-402` to npm; drop `file:` deps
-- [ ] examples: node-server, agent-client, next-route
-- [ ] docs: protocol + circuit + contract + threat model
-- [ ] mainnet checklist; landing polish
+## Gateway
+- [x] `selectVerifier` → `evmVerifier`; `Env` → EVM vars; `VERIFY_MODE=evm`
+- [x] http test **4/4** (health / 402 / paid-200 / replay)
 
-## Notes
-- Phase 1 proof step is an explicit insecure scaffold (`allowInsecure:true`) — temporary.
-- Gateway/dashboard depend on the SDK via `file:../null-402-sdk` (dev only).
+## MCP + agent
+- [x] Wallet: Stellar Keypair → EVM key; funder tops up gas; self-mint nUSD
+- [x] `deposit` / `pay` on the EVM SDK; on-chain settle via operator
+- [x] Keyless autonomous agent (`src/agent.mjs`) over MCP stdio — verified live
+- [x] Groq LLM agent path (`agent:groq`) rebranded
+
+## Examples / docs
+- [x] `e2e-demo.mjs` migrated + passing (on-chain verify, privacy/replay/tamper)
+- [x] Removed superseded Stellar example scripts (MCP agent is canonical)
+- [x] READMEs + dashboard UI rebranded Stellar → Avalanche
+
+## Next
+- [ ] Trust-minimized settlement (remove trusted relayer)
+- [ ] Durable nullifier/root store for production gateways
+- [ ] Deposit-side unlinkability (relayer/batched deposits)
+- [ ] Wire the dashboard browser demo to `evmVerifier` on Fuji
