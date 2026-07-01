@@ -105,8 +105,8 @@ export function evmVerifier(cfg: EvmVerifierConfig): Verifier {
 /**
  * Verify the Groth16 proof off-chain with snarkjs against the circuit's verifying
  * key. This is REAL zero-knowledge verification — the same pairing check the
- * Soroban contract performs, just run locally. Use it where there is no chain
- * access (tests, edge environments) or as a fast pre-check before sorobanVerifier.
+ * Avalanche contract performs, just run locally. Use it where there is no chain
+ * access (tests, edge environments) or as a fast pre-check before evmVerifier.
  *
  * Requires `snarkjs` (optional peer dep) and the circuit's verification_key.json.
  */
@@ -154,7 +154,7 @@ export function devVerifier(opts: { sharedSecret: string; allowInsecure: boolean
   if (!opts.allowInsecure) {
     throw new Error(
       "devVerifier is an insecure scaffold and is disabled. Pass allowInsecure:true " +
-        "ONLY in local/dev, or switch to sorobanVerifier for real ZK verification.",
+        "ONLY in local/dev, or switch to evmVerifier for real ZK verification.",
     );
   }
   return {

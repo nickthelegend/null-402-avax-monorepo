@@ -1,6 +1,6 @@
 # null-402-landing
 
-Marketing landing page for **null-402** — private pay-per-call on Stellar.
+Marketing landing page for **null-402** — private pay-per-call on Avalanche.
 
 A single static `index.html`, no build step. Open it directly or deploy to any
 static host (Vercel, Netlify, GitHub Pages, Cloudflare Pages).

@@ -3,9 +3,9 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "null-402 — private pay-per-call on Stellar",
+  title: "null-402 — private pay-per-call on Avalanche",
   description:
-    "x402 with zero-knowledge payment proofs on Stellar. Verify payments without revealing the sender account, amount, or which API was accessed.",
+    "x402 with zero-knowledge payment proofs on Avalanche. Verify payments without revealing the sender account, amount, or which API was accessed.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

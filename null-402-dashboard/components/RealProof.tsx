@@ -17,7 +17,7 @@ export function RealProof() {
     setResult(null);
     try {
       const p = await proveInBrowser(setStep);
-      setStep("verifying the proof on Stellar testnet…");
+      setStep("verifying the proof on Avalanche testnet…");
       const t0 = performance.now();
       const res = await fetch("/api/verify", {
         method: "POST",
@@ -41,7 +41,7 @@ export function RealProof() {
         <div>
           <h3 className="text-sm font-semibold text-slate-100">Real ZK proof — generated in your browser</h3>
           <p className="text-xs text-slate-400 mt-1">
-            snarkjs + the Circom circuit run client-side; the proof is then verified on the deployed Stellar verifier.
+            snarkjs + the Circom circuit run client-side; the proof is then verified on the deployed Avalanche verifier.
           </p>
         </div>
         <button
@@ -69,7 +69,7 @@ export function RealProof() {
             </div>
             <p className="text-xs text-slate-400">
               proved in <span className="text-slate-200 font-mono">{result.proveMs}ms</span> (browser) ·
-              verified in <span className="text-slate-200 font-mono">{result.verifyMs}ms</span> (Stellar testnet)
+              verified in <span className="text-slate-200 font-mono">{result.verifyMs}ms</span> (Avalanche Fuji)
             </p>
             <p className="text-[11px] text-slate-500 mt-3 uppercase tracking-wide">Revealed (public)</p>
             <Row k="nullifier" v={result.signals.nullifier} reveal />

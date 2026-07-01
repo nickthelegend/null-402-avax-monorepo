@@ -13,7 +13,7 @@ export default function Home() {
             </div>
             <span className="font-semibold text-slate-100">null-402</span>
             <span className="text-xs bg-violet-900 text-violet-300 px-2 py-0.5 rounded-full">
-              ZK payments on Stellar
+              ZK payments on Avalanche
             </span>
           </div>
           <div className="flex items-center gap-4 text-xs text-slate-400">
@@ -23,8 +23,8 @@ export default function Home() {
             <a href="https://x402.org" className="hover:text-slate-200 transition-colors">
               x402 spec
             </a>
-            <a href="https://developers.stellar.org/docs/build/apps/privacy" className="hover:text-slate-200 transition-colors">
-              Stellar privacy
+            <a href="https://build.avax.network" className="hover:text-slate-200 transition-colors">
+              Avalanche privacy
             </a>
           </div>
         </div>
@@ -38,7 +38,7 @@ export default function Home() {
         <p className="text-slate-400 max-w-2xl mx-auto text-base">
           Standard x402 broadcasts who paid, how much, and which API they accessed.{" "}
           <strong className="text-slate-200">null-402</strong> replaces the payment with a
-          zero-knowledge proof verified on Stellar — only a single boolean and a one-time
+          zero-knowledge proof verified on Avalanche — only a single boolean and a one-time
           nullifier are ever revealed.
         </p>
 
@@ -81,7 +81,7 @@ export default function Home() {
             <h3 className="text-sm font-semibold text-violet-300 mb-2">null-402 (private)</h3>
             <code className="text-xs text-slate-300 block leading-relaxed">
               Agent → 402 →{" "}
-              <span className="text-violet-400">Groth16 proof verified on Stellar</span>{" "}
+              <span className="text-violet-400">Groth16 proof verified on Avalanche</span>{" "}
               → API access
             </code>
             <p className="text-xs text-slate-500 mt-2">
@@ -98,7 +98,7 @@ export default function Home() {
           <h2 className="text-lg font-semibold text-slate-100">Live Demo</h2>
           <p className="text-sm text-slate-400 mt-1">
             Generate a <strong className="text-slate-200">real</strong> zero-knowledge proof in your browser and verify
-            it on Stellar testnet — then compare what a public payment leaks vs. what null-402 reveals.
+            it on Avalanche testnet — then compare what a public payment leaks vs. what null-402 reveals.
           </p>
         </div>
         <div className="mb-8">
@@ -119,13 +119,13 @@ export default function Home() {
                 desc: "Drop-in server gate + client. Client generates a Groth16 proof locally; the gate verifies recipient, amount tier, request binding, and nullifier replay.",
               },
               {
-                title: "Soroban contracts",
+                title: "Solidity contracts",
                 tech: "Rust · BN254 · Poseidon",
                 desc: "A shielded Pool (Poseidon Merkle tree of note commitments) and a Groth16 verifier. Only a boolean ever leaves verification.",
               },
               {
-                title: "Stellar + USDC",
-                tech: "Soroban RPC",
+                title: "Avalanche + nUSD",
+                tech: "Avalanche RPC",
                 desc: "Settlement and proof verification. Replay prevention is keyed on the proof nullifier — never a wallet or tx — with a 24h TTL.",
               },
             ].map(({ title, tech, desc }) => (
@@ -140,7 +140,7 @@ export default function Home() {
       </section>
 
       <footer className="border-t border-slate-800 py-6 text-center text-xs text-slate-600">
-        null-402 — private pay-per-call · Stellar · Groth16 · Cloudflare Workers
+        null-402 — private pay-per-call · Avalanche · Groth16 · Cloudflare Workers
       </footer>
     </main>
   );

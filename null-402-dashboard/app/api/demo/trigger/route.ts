@@ -8,9 +8,9 @@ export async function POST(): Promise<Response> {
   // What a *public* x402 payment leaks to any chain observer.
   const publicObservable = {
     txHash,
-    sender: "GA7QYNF7SOWQ3GLR2BGMZEHHHVHFOMQNXJ3WCD6QXY5...", // demo Stellar account
+    sender: "0x86076053d71E1c95b3c08e68BA39049024D69E67", // demo account
     recipient: process.env.PAYMENT_PAYTO ?? "G_DEMO_GATEWAY_ACCOUNT",
-    amount: `${PRICE_QUOTE / 1_000_000} USDC`,
+    amount: `${PRICE_QUOTE / 1_000_000} nUSD`,
     endpoint: "/v1/price/BTC",
     timestamp: new Date().toISOString(),
   };
@@ -22,8 +22,8 @@ export async function POST(): Promise<Response> {
     amount: "[HIDDEN — proven ≥ price, exact value secret]",
     endpoint: "[HIDDEN — not logged by gateway]",
     nullifier: `nf_${Date.now().toString(16)}${Math.random().toString(16).slice(2, 8)}`,
-    proofRef: `groth16-bn254 · stellar`,
-    privacyMode: "soroban" as const,
+    proofRef: `groth16-bn254 · avalanche`,
+    privacyMode: "evm" as const,
   };
 
   return Response.json({

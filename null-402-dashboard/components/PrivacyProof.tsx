@@ -44,7 +44,7 @@ export function PrivacyProof({ verification }: Props) {
           {verification.payment_valid ? "✓ VALID" : "✗ INVALID"}
         </span>
         <span className="text-xs bg-violet-900 text-violet-300 px-2 py-0.5 rounded-full">
-          {verification.privacyMode === "soroban" ? "On-chain ZK · Stellar" : "Dev scaffold"}
+          {verification.privacyMode === "evm" ? "On-chain ZK · Avalanche" : "Dev scaffold"}
         </span>
       </div>
 
@@ -59,7 +59,7 @@ export function PrivacyProof({ verification }: Props) {
       {/* Groth16 proof */}
       <div className="mt-2 p-3 bg-violet-950 rounded-lg border border-violet-800">
         <p className="text-xs text-violet-400 uppercase tracking-wide mb-1">
-          Groth16 proof — verified on Stellar
+          Groth16 proof — verified on Avalanche
         </p>
         <p className="font-mono text-xs text-violet-300 break-all">{verification.proofRef}</p>
       </div>

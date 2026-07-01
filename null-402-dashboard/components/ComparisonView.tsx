@@ -170,7 +170,7 @@ export function ComparisonView() {
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
             <h2 className="text-sm font-semibold text-slate-200">
-              null-402 — Zero-Knowledge on Stellar
+              null-402 — Zero-Knowledge on Avalanche
             </h2>
           </div>
           <div className="p-3 bg-violet-950 border border-violet-800 rounded-lg text-xs text-violet-300">

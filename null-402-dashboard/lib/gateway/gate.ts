@@ -3,7 +3,7 @@
  *
  * Same SDK the standalone Cloudflare Worker uses; here it runs as Next edge
  * routes so the dashboard is self-contained (no CORS, deploys to Vercel alone).
- * Uses the dev verifier (Phase 1). Swap to sorobanVerifier once contracts deploy.
+ * Uses the dev verifier (Phase 1). Swap to evmVerifier once contracts deploy.
  */
 
 import {

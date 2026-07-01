@@ -16,8 +16,8 @@ export interface PrivateVerification {
   nullifier: string;
   /** Verifier reference safe to display (no sensitive data). */
   proofRef: string;
-  /** "soroban" = real on-chain Groth16. "dev" = local scaffold. */
-  privacyMode: "dev" | "soroban";
+  /** "evm" = real on-chain Groth16. "dev" = local scaffold. */
+  privacyMode: "dev" | "evm";
 }
 
 export interface DemoTriggerResponse {

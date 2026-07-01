@@ -1,6 +1,6 @@
 # null-402
 
-> **Private pay-per-call on Stellar.** x402, but the payment is a zero-knowledge
+> **Private pay-per-call on Avalanche.** x402, but the payment is a zero-knowledge
 > proof instead of a public transfer. No wallet, amount, or endpoint is revealed
 > on-chain or to the gateway — only a one-time nullifier and a `valid` boolean.
 
@@ -8,7 +8,7 @@ null-402 is an **SDK + reference stack**: any API provider can wrap an endpoint 
 a payment gate and get paid privately, and any client can pay without leaking who
 they are, what they paid, or what they called.
 
-> Originally forked from an Arcium/Solana MPC demo and rebuilt on Stellar's ZK
+> Originally forked from an Arcium/Solana MPC demo and rebuilt on Avalanche's ZK
 > primitives. The Arcium pitch had a hole — the Solana transfer was public, so
 > sender/amount were never actually hidden. null-402 closes that with a **shielded
 > pool + on-chain Groth16 verification**: privacy that is real and verifiable.
@@ -25,7 +25,7 @@ Standard x402 (public):
               ↑ sender, amount, endpoint all permanently indexable
 
 null-402 (private):
-  Agent → 402 → Groth16 proof verified on Stellar → API access
+  Agent → 402 → Groth16 proof verified on Avalanche → API access
               ↑ only a nullifier + valid:true ever appear
 ```
 
@@ -35,11 +35,11 @@ null-402 (private):
 deposit → private note (Poseidon commitment in the Pool's Merkle tree)
 call    → client generates a Groth16 proof LOCALLY:
           "I own an unspent note ≥ price, here's its nullifier, bound to THIS request"
-verify  → Soroban verifier contract returns valid:bool; nullifier blocks replay
+verify  → Avalanche verifier contract returns valid:bool; nullifier blocks replay
 serve   → API responds. Chain sees a nullifier + a boolean. Nothing else.
 ```
 
-Secrets never leave the client. Verification trust is anchored on Stellar (BN254
+Secrets never leave the client. Verification trust is anchored on Avalanche (BN254
 pairing host functions), not in the gateway.
 
 | Data field | Standard x402 | null-402 |
@@ -55,10 +55,10 @@ pairing host functions), not in the gateway.
 **Circom + Groth16 over BN254, Poseidon Merkle tree.** For an SDK where a *fixed*
 payment circuit runs on every call and proofs are generated client-side:
 
-- **Most mature on Stellar** — BN254 + Poseidon host functions ship in
+- **Most mature on Avalanche** — BN254 + Poseidon host functions ship in
   `soroban-sdk` (v25), cheaper under Protocol 26.
 - **Closest reference** — Nethermind's Stellar Privacy Pools PoC (Circom/Groth16)
-  is literally private payments on Stellar; we model the pool + nullifier on it.
+  is literally private payments on Avalanche; we model the pool + nullifier on it.
 - **Cheapest verification + smallest proof** — matters when verify runs per call.
 - **Battle-tested browser proving** — snarkjs WASM, ships in the client SDK.
 - Trusted setup is a one-time ceremony for the fixed circuit; the verifying key is
@@ -76,7 +76,7 @@ packages/
                  client.ts  deposit, prove, pay()  (402 → prove → retry)
                  verifier.ts  sorobanVerifier (real) | devVerifier (scaffold)
   circuits/    — Circom payment circuit (proof of valid note spend)   [Phase 2]
-  contracts/   — Soroban: verifier (Groth16/BN254) + pool (Poseidon)  [Phase 2]
+  contracts/   — Avalanche: verifier (Groth16/BN254) + pool (Poseidon)  [Phase 2]
 apps/
   gateway/     — reference Cloudflare Worker built on the SDK
   dashboard/   — Next.js demo: public-vs-private side by side

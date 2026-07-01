@@ -28,7 +28,7 @@ export async function GET(
 
   const headers = {
     "X-Null402-Proof": outcome.result.proofRef,
-    "X-Privacy": outcome.result.mode === "soroban" ? "zk-groth16" : "dev-scaffold",
+    "X-Privacy": outcome.result.mode === "evm" ? "zk-groth16" : "dev-scaffold",
     "X-Payment-Accepted": "true",
   };
 
