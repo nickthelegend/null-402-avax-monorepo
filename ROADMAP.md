@@ -1,6 +1,6 @@
 # null-402 — Roadmap
 
-**Private pay-per-call on Stellar.** x402, but the payment is a zero-knowledge
+**Private pay-per-call on Avalanche.** x402, but the payment is a zero-knowledge
 proof verified on-chain — only a one-time nullifier and a `valid` boolean are ever
 revealed. The product is an **SDK**; everything else is reference + demo.
 
@@ -9,7 +9,7 @@ revealed. The product is an **SDK**; everything else is reference + demo.
 | Repo | Role | Stack |
 |---|---|---|
 | `null-402-sdk` | The npm package `null-402` — server gate + client prover | TypeScript · snarkjs |
-| `null-402-contracts` | Soroban shielded pool + Groth16 verifier | Rust · BN254 · Poseidon |
+| `null-402-contracts` | Avalanche shielded pool + Groth16 verifier | Rust · BN254 · Poseidon |
 | `null-402-circuits` | Circom payment circuit (proof of valid note spend) | Circom · Groth16 |
 | `null-402-gateway` | Reference edge gateway built on the SDK | Cloudflare Workers · Hono |
 | `null-402-dashboard` | Live demo: public vs private, side by side | Next.js 15 · React 19 |
@@ -24,7 +24,7 @@ Shielded pool, not "a proof about a public payment":
 ```
 deposit → private note (Poseidon commitment in the Pool's Merkle tree)
 call    → client proves locally: "I own an unspent note ≥ price, bound to THIS request"
-verify  → Soroban verifier returns valid:bool; nullifier blocks replay
+verify  → Avalanche verifier returns valid:bool; nullifier blocks replay
 serve   → chain sees a nullifier + a boolean. Nothing else.
 ```
 
@@ -74,7 +74,7 @@ Replace the dev scaffold with real proofs. Delete `devVerifier`/`devProver`.
 - [x] Host-fn support: BN254 pairing **available** in `soroban-sdk` 26.1.0;
       **Poseidon (CAP-0075) NOT yet exposed** by the SDK's `Crypto`. Pinned 26.1.0,
       target **`wasm32v1-none`** (26 rejects `wasm32-unknown-unknown`).
-- [x] **Deployed verifier to Stellar testnet** (`CDCYYFSJ…WO32JQJLV`), init'd with the
+- [x] **Deployed verifier to Avalanche Fuji** (`CDCYYFSJ…WO32JQJLV`), init'd with the
       circuit vk; verifies a real proof on-chain (CLI + SDK).
 - [x] SDK `sorobanVerifier` — encodes the proof, simulate-invokes `verify` over RPC;
       **live testnet test 2/2** (real → true, tampered → false). ScVal: struct as
@@ -93,7 +93,7 @@ Replace the dev scaffold with real proofs. Delete `devVerifier`/`devProver`.
       (kept for offline dev). Fully-trustless on-chain pool when CAP-0075 ships.
 
 ### Phase 3 — Testnet + hardening
-- [ ] Deploy verifier + pool to Stellar testnet; flip `VERIFY_MODE=soroban`.
+- [ ] Deploy verifier + pool to Avalanche Fuji; flip `VERIFY_MODE=soroban`.
 - [ ] Browser proving in the dashboard (snarkjs WASM); real deposit/pay UX.
 - [ ] Security pass: replay, root-window, context binding, fee/DoS, malformed proofs.
 - [ ] CI per repo (build + test).

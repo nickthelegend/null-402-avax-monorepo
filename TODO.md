@@ -18,7 +18,7 @@ Working checklist. See [ROADMAP.md](ROADMAP.md) for the full plan.
 - [x] `null-402-contracts/verifier` — BN254 Groth16 pairing — **host test verifies real proof** (`cargo test`)
 - [x] host-fn status: BN254 ✓ in soroban-sdk 26.1.0; **Poseidon NOT exposed yet**. target `wasm32v1-none`
 - [x] **deploy verifier to testnet** (`CDCYYFSJ…`), init vk; verifies real proof on-chain (CLI)
-- [x] SDK `sorobanVerifier` (Soroban RPC simulate) — **live testnet 2/2** (`npm run test:soroban`)
+- [x] SDK `sorobanVerifier` (Avalanche RPC simulate) — **live testnet 2/2** (`npm run test:soroban`)
 - [x] `null-402-contracts/pool` — deposit/escrow + on-chain nullifier set + cross-contract `settle`. **5 tests** (`cargo test` = 10/10 with verifier)
 - [x] gateway `VERIFY_MODE=soroban` end-to-end (gateway-managed `KNOWN_ROOTS` + KV nullifiers)
 - [x] **e2e demo** `null-402-examples/e2e-demo.mjs` — real proof → gateway → on-chain verify; privacy assertion held; replay/tamper/wrong-recipient rejected
