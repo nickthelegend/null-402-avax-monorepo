@@ -92,7 +92,7 @@ the cryptography is being dropped in, not mocked permanently.
   **insecure local scaffold** that requires explicit `allowInsecure: true` and is
   never used in production. This is scaffolding, not the product.
 - **Phase 2 (next):** ship `packages/circuits` (Circom + trusted setup), deploy
-  `packages/contracts` (verifier + pool) to Stellar testnet, wire
+  `packages/contracts` (verifier + pool) to Avalanche Fuji, wire
   `sorobanVerifier` + `groth16Prover`, flip `VERIFY_MODE=soroban`. Then the dev
   scaffold is deleted.
 

@@ -1,11 +1,11 @@
-# null-402 — private pay-per-call on Stellar
+# null-402 — private pay-per-call on Avalanche
 
 > **x402, but the payment is a zero-knowledge proof.** An API request pays with a
 > Groth16 proof verified **on-chain** by a Soroban contract — so no wallet,
 > amount, or endpoint is revealed. Built for agents: an autonomous agent escrows
-> XLM once, then pays per call privately.
+> nUSD once, then pays per call privately.
 
-Everything below is **real and verifiable on Stellar testnet** — no mocks.
+Everything below is **real and verifiable on Avalanche Fuji** — no mocks.
 
 ## The idea
 
@@ -14,7 +14,7 @@ payment with a **ZK proof of an unspent note in a shielded pool**. Only a
 nullifier and a `valid:true` boolean ever touch the chain.
 
 ```
-deposit  →  agent escrows XLM into the Pool, commits a private note   (on-chain, public)
+deposit  →  agent escrows nUSD into the Pool, commits a private note   (on-chain, public)
 prove    →  agent generates a Groth16 proof locally: "I own an unspent note ≥ price,
             bound to THIS gateway + request"                          (secrets stay local)
 verify   →  gateway simulates the Soroban verifier → valid:true       (on-chain, ~0 fee)  → 200
@@ -41,28 +41,28 @@ settle   →  operator pays the provider from the Pool, burns the nullifier (on-
   privately — only a nullifier is revealed.
 - **Groq autonomous demo**: a Groq LLM, given those tools, **autonomously**
   creates a wallet, deposits a 1-XLM note, and pays an x402 endpoint — the gateway
-  verifies **and settles on-chain** (1 XLM → provider, nullifier spent) — then the
+  verifies **and settles on-chain** (1 nUSD → provider, nullifier spent) — then the
   agent answers. Real run: deposit `0ad8a311…`, settle `3969f955…`, `200 OK ·
   X-Privacy=zk-groth16`. Real value moves agent → pool → provider, privately.
 - **Dashboard** generates a **real Groth16 proof in the browser** (snarkjs) and
   verifies it on the deployed Stellar verifier (`/api/verify` → `valid:true`).
 
-## Deployed on Stellar testnet
+## Deployed on Avalanche Fuji
 
 | | id |
 |---|---|
-| Verifier (Groth16 / BN254) | [`CDCYYFSJ…WO32JQJLV`](https://stellar.expert/explorer/testnet/contract/CDCYYFSJ7QC7RO6L2DHWK6X6IMZ5U5J3IEAKLKTBTBDX45LWO32JQJLV) |
-| Pool (escrow + nullifiers) | [`CCVYSIWU…YS32C24XL`](https://stellar.expert/explorer/testnet/contract/CCVYSIWUAOZYFVAM6R76DMKDY4Y52SFIPY6CX3HBMUFF5Q4YS32C24XL) |
-| Token (native XLM SAC) | `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC` |
+| Verifier (Groth16 / BN254) | [`CDCYYFSJ…WO32JQJLV`](https://testnet.snowtrace.io/contract/CDCYYFSJ7QC7RO6L2DHWK6X6IMZ5U5J3IEAKLKTBTBDX45LWO32JQJLV) |
+| Pool (escrow + nullifiers) | [`CCVYSIWU…YS32C24XL`](https://testnet.snowtrace.io/contract/CCVYSIWUAOZYFVAM6R76DMKDY4Y52SFIPY6CX3HBMUFF5Q4YS32C24XL) |
+| Token (native nUSD SAC) | `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC` |
 
 ### Real transactions
 
 | What | tx |
 |---|---|
-| Verifier deploy | [`d6f10978…`](https://stellar.expert/explorer/testnet/tx/d6f109783223f68dbd289b32e7e15ef22ea564fe1b8bff8a2cc841d5100d91a5) |
-| Verifier `init(vk)` | [`75438a9d…`](https://stellar.expert/explorer/testnet/tx/75438a9db154121356c2aa33ba4c10f9e8dd423d1bb16518c3f481e169c6514e) |
-| Agent **deposit** (escrow XLM) | [`447d0ef8…`](https://stellar.expert/explorer/testnet/tx/447d0ef8427bf2ad161db726cb093167fa07ec4d686708c35c7bf56a406d3bd4) |
-| Operator **settle** (verify → payout) | [`db18bb8e…`](https://stellar.expert/explorer/testnet/tx/db18bb8e5dd0dd932d4bcb2609dcfc65148e18b56237bf958a8ffcaca24a91b0) |
+| Verifier deploy | [`d6f10978…`](https://testnet.snowtrace.io/tx/d6f109783223f68dbd289b32e7e15ef22ea564fe1b8bff8a2cc841d5100d91a5) |
+| Verifier `init(vk)` | [`75438a9d…`](https://testnet.snowtrace.io/tx/75438a9db154121356c2aa33ba4c10f9e8dd423d1bb16518c3f481e169c6514e) |
+| Agent **deposit** (escrow nUSD) | [`447d0ef8…`](https://testnet.snowtrace.io/tx/447d0ef8427bf2ad161db726cb093167fa07ec4d686708c35c7bf56a406d3bd4) |
+| Operator **settle** (verify → payout) | [`db18bb8e…`](https://testnet.snowtrace.io/tx/db18bb8e5dd0dd932d4bcb2609dcfc65148e18b56237bf958a8ffcaca24a91b0) |
 
 The **settle** tx runs the BN254 pairing on-chain (returns `verify → true`),
 spends the nullifier, and pays the provider — revealing only a nullifier, not the
@@ -79,7 +79,7 @@ agent.
 | Gateway — HTTP 402→proof→200→replay | `npm run test:http` | **4/4** |
 | Circuit — compile + trusted setup + verify | `npm run build` | proof verifies |
 | End-to-end demo | `node e2e-demo.mjs` | full flow, privacy held |
-| Agentic on-chain demo | `node agent.mjs` | deposit + pay + settle, real XLM |
+| Agentic on-chain demo | `node agent.mjs` | deposit + pay + settle, real nUSD |
 
 Highlights:
 - **Contracts** `pool.settle` is a real cross-contract Groth16 verify + SAC-token

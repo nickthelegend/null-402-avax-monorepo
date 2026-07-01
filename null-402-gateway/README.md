@@ -27,7 +27,7 @@ numbers). The response carries `"source": "coinbase"` / `"coingecko"`.
 
 - `VERIFY_MODE=soroban` — **real on-chain Groth16 verification.** The gateway
   simulates `verify()` on the deployed [verifier](../null-402-contracts) over
-  Soroban RPC; the BN254 pairing runs on Stellar. Needs `VERIFIER_CONTRACT_ID`
+  Soroban RPC; the BN254 pairing runs on Avalanche. Needs `VERIFIER_CONTRACT_ID`
   (a live testnet one ships in `.env.example`) + `STELLAR_SOURCE_ACCOUNT`.
   Proven end-to-end against testnet: `npm run test:soroban`.
 - `VERIFY_MODE=dev` — insecure local scaffold (no chain). Requires

@@ -1,6 +1,6 @@
 # null-402
 
-> Private pay-per-call on Stellar. x402, but the payment is a zero-knowledge
+> Private pay-per-call on Avalanche. x402, but the payment is a zero-knowledge
 > proof — no wallet, amount, or endpoint is revealed on-chain or to the gateway.
 
 Any API provider can accept private payments in a few lines. Any client can pay
@@ -60,7 +60,7 @@ The SDK also talks to the deployed pool directly (real value moves):
 
 ```ts
 import { poolDeposit, poolCommitments, poolSettle } from "null-402";
-// poolDeposit  → agent escrows XLM + records its commitment   (signed tx)
+// poolDeposit  → agent escrows nUSD + records its commitment   (signed tx)
 // poolCommitments → read the on-chain commitment list (build the tree off-chain)
 // poolSettle   → operator: on-chain Groth16 verify → pay provider → spend nullifier
 ```
@@ -70,7 +70,7 @@ import { poolDeposit, poolCommitments, poolSettle } from "null-402";
 ```
 npm test            # dev flow            → 7/7
 npm run test:real   # real Groth16 prove+verify (snarkjs) → 4/4
-npm run test:soroban# live verify on Stellar testnet      → 2/2
+npm run test:soroban# live verify on Avalanche Fuji      → 2/2
 ```
 
 `test:real` generates a real proof and verifies it with snarkjs; `test:soroban`
@@ -79,7 +79,7 @@ verifies the same proof against the **deployed testnet verifier** contract.
 ## Real vs. scaffold
 
 - `groth16Prover` / `localGroth16Verifier` / `sorobanVerifier` — the **real** path
-  (snarkjs proof, off-chain verify, and on-chain verify on Stellar).
+  (snarkjs proof, off-chain verify, and on-chain verify on Avalanche).
 - `devVerifier` / `devProver` — an **insecure** local scaffold, gated behind
   `allowInsecure: true`, for offline dev only.
 
