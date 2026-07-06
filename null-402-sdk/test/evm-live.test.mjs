@@ -2,7 +2,21 @@
 // Verifies the real Groth16 proof via evmVerifier (eth_call) and settles it
 // through the pool (operator tx → pays provider, burns nullifier).
 //
-//   NULL402_OPERATOR_KEY=0x... node test/evm-live.test.mjs
+// NOT run as part of the local/offline test suite: this hits the live Fuji
+// RPC (eth_call, and — if NULL402_OPERATOR_KEY is set — a broadcast tx). To
+// avoid nonce collisions with other agents sharing the funded key, this test
+// is opt-in only and skips cleanly (exit 0) unless explicitly enabled:
+//
+//   NULL402_RUN_LIVE_TESTS=1 NULL402_OPERATOR_KEY=0x... node test/evm-live.test.mjs
+if (process.env.NULL402_RUN_LIVE_TESTS !== "1") {
+  console.log("null-402 SDK — live Fuji EVM path");
+  console.log(
+    "  … skipped (set NULL402_RUN_LIVE_TESTS=1 to run against live Avalanche Fuji; " +
+      "requires network access and, for the settle check, NULL402_OPERATOR_KEY)",
+  );
+  process.exit(0);
+}
+
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { evmVerifier, poolSettle } from "../dist/index.js";

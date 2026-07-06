@@ -14,8 +14,9 @@
   },
   "files": ["dist", "src"],
   "scripts": {
-    "test": "node test/flow.test.mjs",
+    "test": "node test/flow.test.mjs && node test/unit.test.mjs && node test/note-commitment.test.mjs",
     "test:real": "node test/real-proof.test.mjs",
+    "test:live": "node test/evm-live.test.mjs",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

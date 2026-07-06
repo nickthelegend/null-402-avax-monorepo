@@ -8,7 +8,9 @@
     "deploy": "wrangler deploy",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "test:http": "tsx test/http.test.mts"
+    "test:http": "tsx test/http.test.mts",
+    "test:http-evm": "tsx test/http-evm.test.mts",
+    "test": "npm run test:http && npm run test:http-evm"
   },
   "dependencies": {
     "hono": "^4.4.7",
