@@ -7,6 +7,7 @@
   "bin": { "null-402-mcp": "src/index.mjs" },
   "scripts": {
     "start": "node src/index.mjs",
+    "test": "node test/lib.test.mjs",
     "selftest": "node src/selftest.mjs",
     "agent": "node src/agent.mjs",
     "agent:groq": "node src/groq-agent.mjs"
