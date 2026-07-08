@@ -16,5 +16,5 @@ npm run dev                  # → http://localhost:3000
 Leave `NEXT_PUBLIC_GATEWAY_URL` blank to use the embedded routes, or point it at a
 deployed [`null-402-gateway`](../null-402-gateway) Worker.
 
-> Phase 1 uses the SDK's dev verifier. Flip to the real Soroban verifier once
-> `null-402-contracts` is deployed.
+> Dev mode uses the SDK's dev verifier; flip to the real on-chain verifier with
+> `VERIFY_MODE=evm` — `null-402-contracts` is deployed on Avalanche Fuji.
