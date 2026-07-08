@@ -59,6 +59,20 @@ settle   →  operator pays the provider from the Pool, burns the nullifier (on-
    NULL402_FUNDER_KEY=0x... npm run selftest)
 ```
 
+## Tests — verified, all passing
+
+| Package | Command | Result |
+|---|---|---|
+| `null-402-contracts` | `forge test` | **22/22** |
+| `null-402-sdk` | `npm test` | **42/42** (flow 7 + unit 25 + note-commitment 10) |
+| `null-402-sdk` | `npm run test:real` | **4/4** (real snarkjs Groth16 proof) |
+| `null-402-gateway` | `npm test` | **7/7** (dev-mode http 4 + `VERIFY_MODE=evm` http-evm 3) |
+| `null-402-mcp` | `npm test` | **20/20** (tool handlers, mocked viem clients) |
+
+Full reproducible matrix — coverage per suite, dev vs EVM verify modes, and
+the opt-in live-Fuji check (`NULL402_RUN_LIVE_TESTS=1`) — is in
+[`TESTING.md`](./TESTING.md).
+
 ## ZK stack
 
 Circom + **Groth16 over BN254**, Poseidon Merkle tree (depth 20, 11,491
