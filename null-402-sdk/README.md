@@ -9,12 +9,12 @@ without leaking who they are, what they paid, or what they called.
 ## Server — gate an endpoint
 
 ```ts
-import { verifyPayment, build402, sorobanVerifier, memoryNullifierStore } from "null-402/server";
+import { verifyPayment, build402, evmVerifier, memoryNullifierStore } from "null-402/server";
 
 const cfg = {
   requiredAmount: 1_000,                       // price tier
-  payTo: "G...GATEWAY",                         // your Stellar account/contract
-  verifier: sorobanVerifier({ rpcUrl, network: "testnet", poolContractId, verifierContractId }),
+  payTo: "0x…gateway",                          // your gateway EVM address
+  verifier: evmVerifier({ rpcUrl, verifierContractId, chainId: 43113 }), // Avalanche Fuji
   nullifiers: memoryNullifierStore(),           // swap for KV / Durable Object / DB
 };
 
@@ -32,7 +32,7 @@ else { /* serve the resource — out.result.valid === true */ }
 import { Null402Client, groth16Prover } from "null-402/client";
 
 const client = new Null402Client({
-  stellar: { rpcUrl, network: "testnet", poolContractId, verifierContractId },
+  evm: { rpcUrl, chainId: 43113, poolContractId, verifierContractId }, // Avalanche Fuji
   prover: groth16Prover({ wasmPath, zkeyPath }),
 });
 
@@ -47,7 +47,7 @@ const res = await client.pay("https://api.example.com/v1/price/BTC", {
 ```
 deposit → private note (Poseidon commitment in the Pool's Merkle tree)
 call    → Groth16 proof: "I own an unspent note ≥ price, bound to THIS request"
-verify  → Soroban verifier contract returns valid:bool; nullifier blocks replay
+verify  → on-chain Groth16 verifier (eth_call on Avalanche Fuji) returns valid:bool; nullifier blocks replay
 ```
 
 Verifier / Policy / Application are split: the verifier checks only cryptographic
@@ -68,18 +68,20 @@ import { poolDeposit, poolCommitments, poolSettle } from "null-402";
 ## Tests
 
 ```
-npm test            # dev flow            → 7/7
-npm run test:real   # real Groth16 prove+verify (snarkjs) → 4/4
-npm run test:soroban# live verify on Avalanche Fuji      → 2/2
+npm test            # dev flow + unit + note-commitment      → 42/42
+npm run test:real   # real Groth16 prove+verify (snarkjs)     → 4/4
+npm run test:live   # live verify on Avalanche Fuji (opt-in)  → set NULL402_RUN_LIVE_TESTS=1
 ```
 
-`test:real` generates a real proof and verifies it with snarkjs; `test:soroban`
-verifies the same proof against the **deployed testnet verifier** contract.
+`test:real` generates a real proof and verifies it with snarkjs; `test:live`
+(env-gated: `NULL402_RUN_LIVE_TESTS=1`) verifies the same proof against the
+**deployed Fuji verifier** contract via `eth_call`. See `../TESTING.md` for the
+full matrix.
 
 ## Real vs. scaffold
 
-- `groth16Prover` / `localGroth16Verifier` / `sorobanVerifier` — the **real** path
-  (snarkjs proof, off-chain verify, and on-chain verify on Avalanche).
+- `groth16Prover` / `localGroth16Verifier` / `evmVerifier` — the **real** path
+  (snarkjs proof, off-chain verify, and on-chain verify on Avalanche via `eth_call`).
 - `devVerifier` / `devProver` — an **insecure** local scaffold, gated behind
   `allowInsecure: true`, for offline dev only.
 

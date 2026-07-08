@@ -25,18 +25,19 @@ numbers). The response carries `"source": "coinbase"` / `"coingecko"`.
 
 ## Verify modes
 
-- `VERIFY_MODE=soroban` — **real on-chain Groth16 verification.** The gateway
-  simulates `verify()` on the deployed [verifier](../null-402-contracts) over
-  Soroban RPC; the BN254 pairing runs on Avalanche. Needs `VERIFIER_CONTRACT_ID`
-  (a live testnet one ships in `.env.example`) + `STELLAR_SOURCE_ACCOUNT`.
-  Proven end-to-end against testnet: `npm run test:soroban`.
+- `VERIFY_MODE=evm` (default) — **real on-chain Groth16 verification.** The gateway
+  `eth_call`s `verifyProof()` on the deployed [verifier](../null-402-contracts) over
+  Avalanche Fuji RPC; the BN254 pairing runs on-chain. Needs `VERIFIER_CONTRACT_ID`
+  (a live Fuji one ships in `.env.example`) + `EVM_RPC_URL` + `EVM_CHAIN_ID` (43113).
+  The real EVM code path is covered by `test/http-evm.test.mts` (against a local
+  stub JSON-RPC): `npm test`.
 - `VERIFY_MODE=dev` — insecure local scaffold (no chain). Requires
   `DEV_SHARED_SECRET`. Never use in production.
 
 ## Gateway-managed pool state
 
-While Stellar lacks an on-chain Poseidon host function, the gateway maintains the
-trust-minimized state off-chain over the trustless on-chain verifier:
+Neither EVM nor Stellar exposes a cheap on-chain Poseidon; the gateway maintains
+the trust-minimized state off-chain over the trustless on-chain verifier:
 
 - **Nullifiers** → KV, keyed on the proof nullifier only (never a wallet or tx),
   24h TTL. Replay is caught before the chain call.
@@ -48,11 +49,12 @@ No wallet, amount, or endpoint is ever logged.
 ## Tests
 
 ```
-npm run test:http      # 402 → proof → 200 → replay, dev verifier   → 4/4
+npm test               # http (dev) 4/4 + http-evm (real evm path) 3/3  → 7/7
+npm run test:http      # 402 → proof → 200 → replay, dev verifier        → 4/4
 ```
 
-End-to-end in `VERIFY_MODE=soroban` (real proof → on-chain verify → `200`) is
-exercised by [`null-402-examples`](../null-402-examples): `node e2e-demo.mjs` and
-`node agent.mjs` drive the real gateway app against the deployed testnet verifier.
-A real run returns `200 OK · X-Privacy=zk-groth16`, with replay → `402`,
-tampered → `402` (pairing fails on-chain), wrong-recipient → `400`.
+`test/http-evm.test.mts` boots the real gateway app in `VERIFY_MODE=evm` against a
+local stub JSON-RPC and asserts the real `evmVerifier`/`eth_call` code path:
+accept → `200`, reject → `402`, unlisted root → unknown-root. A live end-to-end
+run (`VERIFY_MODE=evm` against the deployed Fuji verifier) is exercised by
+[`null-402-examples`](../null-402-examples). See `../TESTING.md` for the full matrix.
