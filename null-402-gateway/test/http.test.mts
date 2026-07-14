@@ -32,7 +32,19 @@ const env: any = {
   EVM_CHAIN_ID: "43113",
 };
 
-const client = new Null402Client({ prover: devProver({ sharedSecret: SECRET }) });
+// deposit() now signs a real on-chain Pool escrow tx; mock the signer + the
+// chain call so this in-process HTTP test stays fully offline.
+let mockLeafIndex = 0;
+const client = new Null402Client({
+  prover: devProver({ sharedSecret: SECRET }),
+  evm: {
+    rpcUrl: "http://mock-rpc.invalid",
+    poolContractId: "0xMOCKPOOL",
+    verifierContractId: "0xMOCKVERIFIER",
+    signerSecret: "0x" + "44".repeat(32),
+  },
+  poolDeposit: async () => ({ hash: "0xMOCKDEPOSITTX", leafIndex: mockLeafIndex++ }),
+});
 
 async function paymentHeader(path: string, requiredAmount: number) {
   const note = await client.deposit(10_000n);

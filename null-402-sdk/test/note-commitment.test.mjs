@@ -106,17 +106,42 @@ await test("poolRoot: matches buildPoolWitness's root for leaf 0", async () => {
 
 // ── Null402Client.deposit / prove (dev prover, no chain) ───────────────────
 
-await test("Null402Client.deposit: mints a note with the requested value and fresh secrets", async () => {
+// deposit() now signs a real on-chain Pool escrow tx; mock the signer + the
+// chain call itself so these stay offline unit tests of the note/prove logic.
+function mockEvmClient(overrides = {}) {
+  let leafIndex = 0;
+  return new Null402Client({
+    prover: devProver({ sharedSecret: "s" }),
+    evm: {
+      rpcUrl: "http://mock-rpc.invalid",
+      poolContractId: "0xMOCKPOOL",
+      verifierContractId: "0xMOCKVERIFIER",
+      signerSecret: "0x" + "22".repeat(32),
+    },
+    poolDeposit: async () => ({ hash: "0xMOCKDEPOSITTX", leafIndex: leafIndex++ }),
+    ...overrides,
+  });
+}
+
+await test("Null402Client.deposit: throws without an evm signer (no silent local-only note)", async () => {
   const client = new Null402Client({ prover: devProver({ sharedSecret: "s" }) });
+  await assert.rejects(() => client.deposit(500n), /requires an evm signer/);
+});
+
+await test("Null402Client.deposit: escrows on-chain (via poolDeposit) and mints a note with fresh secrets", async () => {
+  const client = mockEvmClient();
   const n1 = await client.deposit(500n);
   const n2 = await client.deposit(500n);
   assert.equal(n1.value, 500n);
   assert.notEqual(n1.secret, n2.secret, "secrets must be randomized per note");
   assert.notEqual(n1.nullifierSecret, n2.nullifierSecret);
+  assert.equal(typeof n1.commitment, "string", "commitment is set from the real on-chain deposit");
+  assert.equal(n1.leafIndex, 0);
+  assert.equal(n2.leafIndex, 1);
 });
 
 await test("Null402Client.prove: contextHash binds method+path+amount+payTo (dev prover)", async () => {
-  const client = new Null402Client({ prover: devProver({ sharedSecret: "s" }) });
+  const client = mockEvmClient();
   const note = await client.deposit(1000n);
   const bundleA = await client.prove({
     note, merkleRoot: "root", payTo: "0xGW", requiredAmount: 100,

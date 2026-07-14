@@ -64,4 +64,9 @@ export interface EvmConfig {
   poolContractId: string;
   /** Deployed Groth16 verifier address (0x...). */
   verifierContractId: string;
+  /** Optional signer private key (0x-prefixed) for the depositing account.
+   *  Required by `Null402Client.deposit()` to build + sign the on-chain Pool
+   *  `deposit(commitment, amount)` tx. Without it, `deposit()` throws rather
+   *  than minting an unbacked local note. */
+  signerSecret?: string;
 }

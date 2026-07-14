@@ -107,6 +107,10 @@ const KV = {
 // every signal — including the nullifier — must be a decimal field-element
 // string, never a placeholder like "nf-123" or "0xpoolroot".
 let nullifierCounter = 0;
+// deposit() now signs a real on-chain Pool escrow tx; mock the signer + the
+// chain call so this in-process HTTP test stays fully offline (the stubbed
+// eth_call RPC below only stands in for the verifier contract, not the pool).
+let mockLeafIndex = 0;
 const client = new Null402Client({
   prover: {
     mode: "groth16",
@@ -124,6 +128,13 @@ const client = new Null402Client({
       };
     },
   },
+  evm: {
+    rpcUrl: "http://mock-rpc.invalid",
+    poolContractId: "0xMOCKPOOL",
+    verifierContractId: "0xMOCKVERIFIER",
+    signerSecret: "0x" + "55".repeat(32),
+  },
+  poolDeposit: async () => ({ hash: "0xMOCKDEPOSITTX", leafIndex: mockLeafIndex++ }),
 });
 
 // evmVerifier (unlike the dev verifier) BigInt-parses every public signal

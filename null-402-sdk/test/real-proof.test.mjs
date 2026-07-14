@@ -52,7 +52,20 @@ function treeFor(commitment) {
   return { pathElements, pathIndices, merkleRoot: cur.toString() };
 }
 
-const client = new Null402Client({ prover: groth16Prover({ wasmPath, zkeyPath }) });
+// deposit() now signs a real on-chain Pool escrow tx; mock the signer + the
+// chain call itself so this test stays a REAL-ZK-but-offline test (no chain,
+// no circuit skipped) — see evm-live.test.mjs for the real on-chain path.
+let mockLeafIndex = 0;
+const client = new Null402Client({
+  prover: groth16Prover({ wasmPath, zkeyPath }),
+  evm: {
+    rpcUrl: "http://mock-rpc.invalid",
+    poolContractId: "0xMOCKPOOL",
+    verifierContractId: "0xMOCKVERIFIER",
+    signerSecret: "0x" + "33".repeat(32),
+  },
+  poolDeposit: async () => ({ hash: "0xMOCKDEPOSITTX", leafIndex: mockLeafIndex++ }),
+});
 
 let passed = 0;
 async function test(name, fn) {

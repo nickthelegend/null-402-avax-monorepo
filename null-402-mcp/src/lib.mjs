@@ -23,7 +23,7 @@ import {
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import {
   Null402Client, groth16Prover, noteCommitment, buildPoolWitness, encodePayment,
-  poolDeposit, poolCommitments,
+  poolDeposit, poolCommitments, randomField,
 } from "null-402";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -146,7 +146,10 @@ export function createHandlers(deps = {}) {
     const mintHash = await wallet.writeContract({ address: cfg.token, abi: ERC20_ABI, functionName: "mint", args: [w.address, DENOM] });
     await publicClient.waitForTransactionReceipt({ hash: mintHash });
 
-    const note = await client.deposit(DENOM);
+    // Note secrets are minted here (not via Null402Client.deposit(), which now
+    // signs its own on-chain escrow tx) because this wallet's own key — not the
+    // shared prover `client` — is the signer for the Pool deposit below.
+    const note = { secret: randomField(), nullifierSecret: randomField(), value: DENOM };
     const commitment = await noteCommitment(note);
     const dep = await doPoolDeposit({ ...poolCfg, signerSecret: w.privateKey, commitment, amount: DENOM });
 

@@ -1,8 +1,10 @@
 /**
  * null-402 client SDK — the part a paying app/agent uses.
  *
- *   1. deposit(amount)        — fund a private note in the Pool (Phase 2: signs a
- *                               Soroban tx; returns the note secret to keep).
+ *   1. deposit(amount)        — fund a private note by building + signing the
+ *                               on-chain Pool `deposit(commitment, amount)` tx
+ *                               on Avalanche (via evm.ts's `poolDeposit`), then
+ *                               returning the note secret + leaf index to keep.
  *   2. prove({ terms })       — generate a payment proof for a request, locally.
  *   3. pay(url, init)         — fetch() that auto-handles 402: read terms, prove,
  *                               retry with the X-PAYMENT header. Secrets never
@@ -12,6 +14,7 @@
 import type { ProofBundle, PaymentPublicSignals, EvmConfig } from "./types.js";
 import { contextPreimage, hashContext, encodePayment, addressToField } from "./proof.js";
 import { devTag, loadSnarkjs } from "./verifier.js";
+import { poolDeposit } from "./evm.js";
 
 /** A spendable private note held by the client (kept secret, never sent). */
 export interface Note {
@@ -47,18 +50,50 @@ export interface ProverInput {
 export interface Null402ClientOptions {
   evm?: EvmConfig;
   prover: Prover;
+  /** Injectable for tests: overrides the on-chain pool-deposit call that
+   *  `deposit()` uses to escrow funds. Defaults to evm.ts's real
+   *  viem-backed `poolDeposit`. */
+  poolDeposit?: typeof poolDeposit;
 }
 
 export class Null402Client {
   constructor(private readonly opts: Null402ClientOptions) {}
 
   /**
-   * Deposit funds into the Pool, creating a private note.
-   * Phase 2: builds + signs the Pool `deposit(commitment, amount)` Soroban tx and
-   * waits for the leaf index. For now it mints a local note so the flow runs.
+   * Deposit funds into the Pool, creating a private note. Computes the note's
+   * commitment locally (Poseidon(secret, nullifierSecret, value)), then builds
+   * + signs the real on-chain Pool `deposit(commitment, amount)` transaction on
+   * Avalanche (see evm.ts `poolDeposit` — approves the pool's ERC-20 if needed,
+   * sends the deposit, and waits for the receipt), and returns the Note with the
+   * leaf index the Pool assigned it.
+   *
+   * Requires `opts.evm.signerSecret` — the depositing account's private key —
+   * to sign the escrow tx. Without one, this throws rather than silently
+   * minting an unbacked local note.
    */
   async deposit(value: bigint, rng: () => string = randomField): Promise<Note> {
-    return { secret: rng(), nullifierSecret: rng(), value };
+    const note: Note = { secret: rng(), nullifierSecret: rng(), value };
+
+    const evm = this.opts.evm;
+    if (!evm?.signerSecret) {
+      throw new Error(
+        "Null402Client.deposit() requires an evm signer: pass Null402ClientOptions.evm.signerSecret " +
+          "(the depositing account's private key) so the on-chain Pool deposit can be built and signed.",
+      );
+    }
+
+    const commitment = await noteCommitment(note);
+    const doPoolDeposit = this.opts.poolDeposit ?? poolDeposit;
+    const { leafIndex } = await doPoolDeposit({
+      rpcUrl: evm.rpcUrl,
+      chainId: evm.chainId,
+      poolContractId: evm.poolContractId,
+      signerSecret: evm.signerSecret,
+      commitment,
+      amount: value,
+    });
+
+    return { ...note, commitment, leafIndex };
   }
 
   /** Generate a payment proof bound to a specific request + terms. */
@@ -300,7 +335,7 @@ export async function poolRoot(commitments: string[], levels = 20): Promise<stri
 // ── helpers ─────────────────────────────────────────────────────────────────
 
 /** Random BN254 field element (decimal string) — note secrets live in the field. */
-function randomField(): string {
+export function randomField(): string {
   const b = crypto.getRandomValues(new Uint8Array(31)); // < 2^248 < field modulus
   let n = 0n;
   for (const x of b) n = (n << 8n) | BigInt(x);

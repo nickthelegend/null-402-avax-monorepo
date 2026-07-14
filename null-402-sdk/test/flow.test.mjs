@@ -20,7 +20,20 @@ const ROOT = "0xpoolroot";
 const PRICE = 1_000;
 const PATH = "/v1/price/BTC";
 
-const client = new Null402Client({ prover: devProver({ sharedSecret: SECRET }) });
+// deposit() now signs a real on-chain Pool escrow tx, so give the client a
+// (fake) signer and mock out the actual chain call — this test proves the
+// prove/verify flow, not on-chain escrow (see evm-live.test.mjs for that).
+let mockLeafIndex = 0;
+const client = new Null402Client({
+  prover: devProver({ sharedSecret: SECRET }),
+  evm: {
+    rpcUrl: "http://mock-rpc.invalid",
+    poolContractId: "0xMOCKPOOL",
+    verifierContractId: "0xMOCKVERIFIER",
+    signerSecret: "0x" + "11".repeat(32),
+  },
+  poolDeposit: async () => ({ hash: "0xMOCKDEPOSITTX", leafIndex: mockLeafIndex++ }),
+});
 
 function gate(overrides = {}) {
   return {
