@@ -19,7 +19,7 @@ if (process.env.NULL402_RUN_LIVE_TESTS !== "1") {
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { evmVerifier, poolSettle } from "../dist/index.js";
+import { evmVerifier, poolSettle, poolRegisterRoot, fieldToAddress } from "../dist/index.js";
 import { createPublicClient, http, defineChain } from "viem";
 
 const HERE = fileURLToPath(new URL(".", import.meta.url));
@@ -70,15 +70,22 @@ if (OPERATOR_KEY) {
   if (already) {
     console.log("  … nullifier already spent on-chain (a previous run settled it) — skipping settle");
   } else {
-    const before = await client.readContract({ address: TOKEN, abi: ERC20, functionName: "balanceOf", args: [RECIPIENT] });
-    const price = 1000n;
-    const { hash } = await poolSettle({
-      rpcUrl: RPC, poolContractId: POOL, operatorSecret: OPERATOR_KEY, bundle, recipient: RECIPIENT, amount: price,
+    // Payout is now BOUND to the proof: recipient = address(uint160(payTo)),
+    // amount = requiredAmount. Derive the expected recipient/amount from the
+    // public signals (poolSettle sends exactly these). Requires the redeployed
+    // pool (registerRoot + proof-binding); the operator registers the root first.
+    const expectedRecipient = fieldToAddress(BigInt(pub[2]));
+    const expectedAmount = BigInt(pub[3]);
+    const before = await client.readContract({ address: TOKEN, abi: ERC20, functionName: "balanceOf", args: [expectedRecipient] });
+    await poolRegisterRoot({ rpcUrl: RPC, poolContractId: POOL, operatorSecret: OPERATOR_KEY, root: BigInt(pub[1]) });
+    const { hash, recipient, amount } = await poolSettle({
+      rpcUrl: RPC, poolContractId: POOL, operatorSecret: OPERATOR_KEY, bundle,
     });
     console.log(`    settle tx: https://testnet.snowtrace.io/tx/${hash}`);
-    const after = await client.readContract({ address: TOKEN, abi: ERC20, functionName: "balanceOf", args: [RECIPIENT] });
+    const after = await client.readContract({ address: TOKEN, abi: ERC20, functionName: "balanceOf", args: [expectedRecipient] });
     const spent = await client.readContract({ address: POOL, abi: POOL_ABI, functionName: "isSpent", args: [nullifier] });
-    ok(after - before === price, `provider paid ${price} nUSD on settle`);
+    ok(recipient.toLowerCase() === expectedRecipient.toLowerCase(), "settle paid the proof-bound recipient");
+    ok(after - before === expectedAmount, `provider paid ${amount} nUSD (proof-bound) on settle`);
     ok(spent === true, "nullifier burned on-chain");
   }
 } else {

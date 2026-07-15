@@ -16,7 +16,11 @@ contract Null402Test is Test {
 
     address operator = address(this);
     address depositor = address(0xD);
-    address provider = address(0xB0B);
+    // The proof binds the payout recipient to pubSignals[2] (payTo) and the amount
+    // to pubSignals[3] (requiredAmount). settle() enforces amount == PUB[3]; the
+    // recipient is operator-supplied (payTo binding is off-chain), so any address works.
+    address provider; // operator-chosen payout recipient
+    uint256 constant PROOF_AMOUNT = 0x3e8; // PUB[3] = 1000
 
     uint256 constant DENOM = 10_000_000; // 1 unit (7 decimals)
 
@@ -53,12 +57,19 @@ contract Null402Test is Test {
         token = new MockUSD();
         pool = new Null402Pool(IERC20(address(token)), IGroth16Verifier(address(verifier)), operator);
 
+        // The payout recipient is dictated by the proof (pubSignals[2]).
+        provider = address(uint160(PUB[2]));
+
         // fund + deposit so the pool holds an escrow balance to pay out
         token.mint(depositor, DENOM);
         vm.startPrank(depositor);
         token.approve(address(pool), DENOM);
         pool.deposit(uint256(123456789), DENOM); // note commitment (arbitrary here)
         vm.stopPrank();
+
+        // Register the proof's Merkle root as a real pool root so settle() accepts
+        // it (operator-driven root registration).
+        pool.registerRoot(PUB[1]);
     }
 
     // ── deposit ──────────────────────────────────────────────────────────────
@@ -154,10 +165,15 @@ contract Null402Test is Test {
     }
 
     function test_SettleRevertsIfPoolUnderfunded() public {
-        // Drain the pool's escrow first (operator can move funds out via a
-        // legit settle), then attempt to pay more than remains.
-        pool.settle(A, B, C, PUB, provider, DENOM); // pays out the entire escrow
-        assertEq(token.balanceOf(address(pool)), 0);
+        // A fresh pool with NO escrow balance: the proof verifies, the root is
+        // registered and the amount matches, but the payout transfer fails because
+        // the pool holds nothing. (The payout is proof-bound now, so it can no
+        // longer be an arbitrary drain of the whole escrow.)
+        Null402Pool empty =
+            new Null402Pool(IERC20(address(token)), IGroth16Verifier(address(verifier)), operator);
+        empty.registerRoot(PUB[1]);
+        vm.expectRevert(bytes("balance")); // MockUSD reverts on insufficient balance
+        empty.settle(A, B, C, PUB, provider, PROOF_AMOUNT);
     }
 
     // ── settle: double-spend / replay ────────────────────────────────────────
@@ -205,6 +221,82 @@ contract Null402Test is Test {
         vm.prank(newOperator);
         pool.settle(A, B, C, PUB, provider, 1000);
         assertTrue(pool.isSpent(PUB[0]));
+    }
+
+    // ── settle: proof binding (root / recipient / amount) ────────────────────
+
+    function test_SettleRejectsUnknownRoot() public {
+        // Fresh pool where PUB[1] was never registered: proof is valid but the
+        // root is not a recognized pool root.
+        Null402Pool fresh =
+            new Null402Pool(IERC20(address(token)), IGroth16Verifier(address(verifier)), operator);
+        vm.expectRevert(Null402Pool.UnknownRoot.selector);
+        fresh.settle(A, B, C, PUB, provider, PROOF_AMOUNT);
+    }
+
+    function test_SettleRejectsAmountNotBoundToProof() public {
+        // The amount must equal the proof's requiredAmount (PUB[3]); the recipient is
+        // operator-supplied (payTo binding is off-chain — payTo is a hash on-chain).
+        vm.expectRevert(Null402Pool.AmountMismatch.selector);
+        pool.settle(A, B, C, PUB, provider, PROOF_AMOUNT + 1);
+    }
+
+    function test_RegisterRootRejectsNonOperator() public {
+        vm.prank(address(0xBAD));
+        vm.expectRevert(Null402Pool.NotOperator.selector);
+        pool.registerRoot(PUB[1]);
+    }
+
+    function test_RegisterRootMarksKnownAndEmits() public {
+        Null402Pool fresh =
+            new Null402Pool(IERC20(address(token)), IGroth16Verifier(address(verifier)), operator);
+        assertFalse(fresh.knownRoot(PUB[1]));
+        vm.expectEmit(true, false, false, true, address(fresh));
+        emit Null402Pool.RootRegistered(PUB[1]);
+        fresh.registerRoot(PUB[1]);
+        assertTrue(fresh.knownRoot(PUB[1]));
+    }
+
+    // ── constructor / setOperator / deposit input guards ─────────────────────
+
+    function test_ConstructorRejectsZeroToken() public {
+        vm.expectRevert(bytes("zero addr"));
+        new Null402Pool(IERC20(address(0)), IGroth16Verifier(address(verifier)), operator);
+    }
+
+    function test_ConstructorRejectsZeroVerifier() public {
+        vm.expectRevert(bytes("zero addr"));
+        new Null402Pool(IERC20(address(token)), IGroth16Verifier(address(0)), operator);
+    }
+
+    function test_ConstructorRejectsZeroOperator() public {
+        vm.expectRevert(bytes("zero addr"));
+        new Null402Pool(IERC20(address(token)), IGroth16Verifier(address(verifier)), address(0));
+    }
+
+    function test_SetOperatorRejectsZeroAddress() public {
+        vm.expectRevert(bytes("zero addr"));
+        pool.setOperator(address(0));
+    }
+
+    function test_DepositRejectsZeroCommitment() public {
+        token.mint(depositor, DENOM);
+        vm.startPrank(depositor);
+        token.approve(address(pool), DENOM);
+        vm.expectRevert(bytes("bad commitment"));
+        pool.deposit(0, DENOM);
+        vm.stopPrank();
+    }
+
+    function test_DepositRejectsOutOfFieldCommitment() public {
+        // BN254 Fr modulus itself is out of range (valid commitments are < Fr).
+        uint256 fr = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
+        token.mint(depositor, DENOM);
+        vm.startPrank(depositor);
+        token.approve(address(pool), DENOM);
+        vm.expectRevert(bytes("bad commitment"));
+        pool.deposit(fr, DENOM);
+        vm.stopPrank();
     }
 
     // ── settle: bad / tampered proofs ────────────────────────────────────────
@@ -271,8 +363,8 @@ contract Null402Test is Test {
         address newOperator = address(0x0ABC2);
         address provider2 = address(0xB0B2);
 
-        pool.settle(A, B, C, PUB, provider, 500);
-        assertEq(token.balanceOf(provider), 500);
+        pool.settle(A, B, C, PUB, provider, PROOF_AMOUNT);
+        assertEq(token.balanceOf(provider), PROOF_AMOUNT);
 
         pool.setOperator(newOperator);
 

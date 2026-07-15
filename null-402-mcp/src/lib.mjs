@@ -151,7 +151,21 @@ export function createHandlers(deps = {}) {
     // shared prover `client` — is the signer for the Pool deposit below.
     const note = { secret: randomField(), nullifierSecret: randomField(), value: DENOM };
     const commitment = await noteCommitment(note);
-    const dep = await doPoolDeposit({ ...poolCfg, signerSecret: w.privateKey, commitment, amount: DENOM });
+
+    // The mint above already moved DENOM nUSD into this wallet. If the pool escrow
+    // now fails, those funds are NOT lost, but they are also NOT escrowed and no
+    // note exists — surface that explicitly instead of failing silently with a
+    // raw viem error, so the caller knows the mint/deposit are out of sync.
+    let dep;
+    try {
+      dep = await doPoolDeposit({ ...poolCfg, signerSecret: w.privateKey, commitment, amount: DENOM });
+    } catch (e) {
+      throw new Error(
+        `Escrow deposit FAILED after minting ${DENOM} nUSD to ${w.address}: those funds are in your ` +
+        `wallet but were not escrowed into the pool and no note was recorded. Re-run deposit to retry. ` +
+        `Cause: ${e?.message ?? e}`,
+      );
+    }
 
     // Store only the leaf index — the Merkle path is rebuilt at pay time against
     // the CURRENT shared pool tree, so every note proves membership in one tree.
@@ -189,7 +203,11 @@ export function createHandlers(deps = {}) {
     const body = await res.text();
     const settleTx = res.headers.get("X-Settle-Tx");
     const settleErr = res.headers.get("X-Settle-Error");
-    if (res.status === 200) {
+    // Only burn the note locally when the gateway both accepted (HTTP 200) AND did
+    // not report a settle error. A 200 that carries X-Settle-Error means access
+    // was granted but on-chain settlement did NOT happen — keep the note spendable
+    // so it isn't silently lost.
+    if (res.status === 200 && !settleErr) {
       note.spent = true;
       if (settleTx) note.settleTx = settleTx;
       save(w);

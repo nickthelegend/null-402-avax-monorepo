@@ -20,6 +20,12 @@ export interface NullifierStore {
   add(nullifier: string): Promise<void>;
   /** Undo a mark (used when a later check fails so the client can retry). */
   remove(nullifier: string): Promise<void>;
+  /** Atomic check-and-set: mark the nullifier as spent iff it wasn't already,
+   *  returning `true` when it was newly claimed and `false` if it was already
+   *  present. Closes the TOCTOU gap between a separate has() then add(). Optional
+   *  for backwards compatibility — verifyPayment falls back to has()+add() when a
+   *  store doesn't implement it. */
+  addIfAbsent?(nullifier: string): Promise<boolean>;
 }
 
 export interface PaymentTerms {
@@ -37,6 +43,12 @@ export interface GateConfig extends PaymentTerms {
   /** Accepts a Merkle root iff it is a known/recent Pool root. Phase 2: query
    *  the Pool contract's root history. Default dev policy: accept any non-empty. */
   isKnownRoot?: (root: string) => Promise<boolean>;
+  /** Authoritative on-chain double-spend check. When provided, the gate also
+   *  confirms the nullifier isn't already burned in the Pool (via pool.isSpent),
+   *  catching replays the in-memory/KV store missed (e.g. after a restart, across
+   *  isolates, or a settle it never recorded). Defense-in-depth: on an RPC error
+   *  the gate proceeds (the Pool's settle is the final single-use backstop). */
+  isSpentOnChain?: (nullifier: string) => Promise<boolean>;
 }
 
 /** Build the x402 `402 Payment Required` body for a request. */
@@ -109,9 +121,30 @@ export async function verifyPayment(
   const knownRoot = cfg.isKnownRoot ?? (async (r: string) => r.length > 0);
   if (!(await knownRoot(s.merkleRoot))) return { ok: false, reason: "unknown-root" };
 
-  // ── Replay: claim the nullifier before verifying (then roll back on failure)─
-  if (await cfg.nullifiers.has(s.nullifier)) return { ok: false, reason: "replay" };
-  await cfg.nullifiers.add(s.nullifier);
+  // ── Replay: atomically claim the nullifier (closes the has()+add() TOCTOU) ──
+  const claimed = cfg.nullifiers.addIfAbsent
+    ? await cfg.nullifiers.addIfAbsent(s.nullifier)
+    : (await cfg.nullifiers.has(s.nullifier))
+      ? false
+      : (await cfg.nullifiers.add(s.nullifier), true);
+  if (!claimed) return { ok: false, reason: "replay" };
+
+  // ── Replay: authoritative on-chain double-spend check ──────────────────────
+  // The in-memory/KV store can miss a spend (restart, other isolate, a settle it
+  // never recorded); the Pool is the source of truth. Fail open on RPC errors —
+  // the Pool's settle() still rejects a truly-spent nullifier.
+  if (cfg.isSpentOnChain) {
+    let spentOnChain = false;
+    try {
+      spentOnChain = await cfg.isSpentOnChain(s.nullifier);
+    } catch {
+      spentOnChain = false;
+    }
+    if (spentOnChain) {
+      await cfg.nullifiers.remove(s.nullifier);
+      return { ok: false, reason: "replay" };
+    }
+  }
 
   // ── Verifier: cryptographic validity (dev tag now, on-chain Groth16 Phase 2)─
   let valid = false;
@@ -139,6 +172,8 @@ export async function verifyPayment(
 export { decodePayment, contextPreimage, hashContext } from "./proof.js";
 export * from "./verifier.js";
 export * from "./types.js";
+/** On-chain double-spend check for the verify gate's `isSpentOnChain` hook. */
+export { poolIsSpent } from "./evm.js";
 
 /** In-memory nullifier store — fine for a single Worker isolate / tests. Use a
  *  durable store (KV, Durable Object, Postgres) in production. */
@@ -148,5 +183,11 @@ export function memoryNullifierStore(): NullifierStore {
     async has(n) { return spent.has(n); },
     async add(n) { spent.add(n); },
     async remove(n) { spent.delete(n); },
+    /** Atomic on a single JS isolate: the check and the set can't interleave. */
+    async addIfAbsent(n) {
+      if (spent.has(n)) return false;
+      spent.add(n);
+      return true;
+    },
   };
 }

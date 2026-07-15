@@ -33,6 +33,8 @@ export const POOL_ABI = [
   { type: "function", name: "settle", stateMutability: "nonpayable", inputs: [
       { name: "a", type: "uint256[2]" }, { name: "b", type: "uint256[2][2]" }, { name: "c", type: "uint256[2]" },
       { name: "pubSignals", type: "uint256[5]" }, { name: "recipient", type: "address" }, { name: "amount", type: "uint256" }], outputs: [] },
+  { type: "function", name: "registerRoot", stateMutability: "nonpayable", inputs: [{ name: "root", type: "uint256" }], outputs: [] },
+  { type: "function", name: "knownRoot", stateMutability: "view", inputs: [{ name: "root", type: "uint256" }], outputs: [{ type: "bool" }] },
   { type: "event", name: "Deposit", inputs: [
       { name: "index", type: "uint256", indexed: true }, { name: "commitment", type: "uint256", indexed: false },
       { name: "from", type: "address", indexed: true }, { name: "amount", type: "uint256", indexed: false }] },
@@ -125,19 +127,66 @@ export async function poolCommitments(opts: PoolConfig & { sourceAccount?: strin
   return arr.map((x) => x.toString());
 }
 
+/** Derive the payout address the proof binds to: `address(uint160(payToField))`,
+ *  i.e. the low 160 bits of the `payTo` public signal (pubSignals[2]). The Pool
+ *  requires the settle recipient to equal exactly this. */
+export function fieldToAddress(field: bigint): Hex {
+  const masked = field & ((1n << 160n) - 1n);
+  return ("0x" + masked.toString(16).padStart(40, "0")) as Hex;
+}
+
 /** Operator settles a verified payment: on-chain Groth16 verify → spend nullifier
- *  → pay `recipient`. Returns the settlement tx hash. */
+ *  → pay the provider. The payout is BOUND to the proof — the Pool enforces
+ *  `recipient == address(uint160(pubSignals[2]))` and `amount == pubSignals[3]` —
+ *  so this derives both from the proof's public signals rather than trusting
+ *  operator-supplied values (any `recipient`/`amount` in `opts` is ignored).
+ *  Returns the settlement tx hash plus the recipient/amount actually paid. */
 export async function poolSettle(
-  opts: PoolConfig & { operatorSecret: string; bundle: ProofBundle; recipient: string; amount: bigint },
-): Promise<{ hash: string }> {
+  opts: PoolConfig & { operatorSecret: string; bundle: ProofBundle; recipient?: string; amount?: bigint },
+): Promise<{ hash: string; recipient: Hex; amount: bigint }> {
   const { publicClient, walletClient } = clients(opts, opts.operatorSecret);
   if (!walletClient) throw new Error("poolSettle requires operatorSecret");
   const { a, b, c } = toSolidityProof(opts.bundle.proof);
   const pub = solidityPublicSignals(opts.bundle);
+
+  // The amount is bound to the proof on-chain (must equal pubSignals[3]). The recipient
+  // is the provider address the operator is paying — payTo is committed in the proof as a
+  // hash (addressToField), verified off-chain by the gateway, not recoverable on-chain —
+  // so the operator supplies it (defaults to the operator's own account).
+  const recipient = (opts.recipient ?? walletClient.account!.address) as Hex;
+  const amount = pub[3];
+
   const hash = await walletClient.writeContract({
     address: opts.poolContractId as Hex, abi: POOL_ABI, functionName: "settle",
-    args: [a, b, c, pub, opts.recipient as Hex, opts.amount],
+    args: [a, b, c, pub, recipient, amount],
   });
-  await publicClient.waitForTransactionReceipt({ hash });
+  // Cap the wait so a stuck/dropped tx can't hang the operator indefinitely.
+  await publicClient.waitForTransactionReceipt({ hash, timeout: 120_000 });
+  return { hash, recipient, amount };
+}
+
+/** Operator registers a Merkle root as a real pool root so `settle` accepts
+ *  proofs built against it. Returns the registration tx hash. */
+export async function poolRegisterRoot(
+  opts: PoolConfig & { operatorSecret: string; root: bigint | string },
+): Promise<{ hash: string }> {
+  const { publicClient, walletClient } = clients(opts, opts.operatorSecret);
+  if (!walletClient) throw new Error("poolRegisterRoot requires operatorSecret");
+  const hash = await walletClient.writeContract({
+    address: opts.poolContractId as Hex, abi: POOL_ABI, functionName: "registerRoot",
+    args: [BigInt(opts.root)],
+  });
+  await publicClient.waitForTransactionReceipt({ hash, timeout: 120_000 });
   return { hash };
+}
+
+/** Read whether a nullifier is already spent ON-CHAIN (authoritative double-spend
+ *  check). Read-only eth_call — no gas, no signature. */
+export async function poolIsSpent(
+  opts: PoolConfig & { nullifier: bigint | string },
+): Promise<boolean> {
+  const { publicClient } = clients(opts);
+  return (await publicClient.readContract({
+    address: opts.poolContractId as Hex, abi: POOL_ABI, functionName: "isSpent", args: [BigInt(opts.nullifier)],
+  })) as boolean;
 }

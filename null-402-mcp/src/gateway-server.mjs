@@ -9,7 +9,9 @@
  */
 import { serve } from "@hono/node-server";
 import app from "../../null-402-gateway/dist/index.js";
-import { decodePayment, poolSettle, poolCommitments, poolRoot } from "null-402";
+import {
+  decodePayment, poolSettle, poolCommitments, poolRoot, poolIsSpent, poolRegisterRoot,
+} from "null-402";
 
 const VERIFIER = process.env.NULL402_VERIFIER ?? "0x0b44836dDc460f589ce4EB97f276e533A2bE6060";
 const POOL = process.env.NULL402_POOL ?? "0x3f528ab5A5e258f75692A3A9F4441D1E54eBB511";
@@ -46,6 +48,7 @@ export function startGateway({
   // Wrap the gateway: validate the proof's root against the CURRENT on-chain pool
   // root → verify (app.fetch) → on success, settle on-chain.
   let rootCache = { root: "", at: 0 };
+  let lastRegisteredRoot = "";
   const handler = async (req) => {
     const xpay = req.headers.get("X-PAYMENT");
     if (xpay) {
@@ -64,9 +67,30 @@ export function startGateway({
     const headers = new Headers(res.headers);
     try {
       const bundle = decodePayment(xpay);
+      const nullifier = bundle.publicSignals.nullifier;
+
+      // Defense-in-depth: never settle a nullifier already burned on-chain (the
+      // Pool would revert anyway, but this avoids wasting an operator tx and marks
+      // the response as a skipped settlement rather than a hard failure).
+      if (await poolIsSpent({ rpcUrl: RPC, chainId: CHAIN_ID, poolContractId: POOL, nullifier })) {
+        headers.set("X-Settle-Error", "nullifier already spent on-chain");
+        return new Response(await res.text(), { status: 200, headers });
+      }
+
+      // The Pool only settles proofs whose merkleRoot it has registered. Register
+      // the current root (operator-driven) before settling; cache to avoid a
+      // redundant tx when the root hasn't changed.
+      const root = bundle.publicSignals.merkleRoot;
+      if (root && root !== lastRegisteredRoot) {
+        await poolRegisterRoot({ rpcUrl: RPC, chainId: CHAIN_ID, poolContractId: POOL, operatorSecret, root });
+        lastRegisteredRoot = root;
+      }
+
+      // Payout is BOUND to the proof (recipient = address(uint160(payTo)), amount =
+      // requiredAmount); poolSettle derives both from the bundle. `payTo`/
+      // `settleAmount` no longer parametrize the on-chain payout.
       const settle = await poolSettle({
-        rpcUrl: RPC, chainId: CHAIN_ID, poolContractId: POOL,
-        operatorSecret, bundle, recipient: payTo, amount: settleAmount,
+        rpcUrl: RPC, chainId: CHAIN_ID, poolContractId: POOL, operatorSecret, bundle,
       });
       headers.set("X-Settle-Tx", settle.hash);
     } catch (e) {

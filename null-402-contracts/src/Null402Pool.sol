@@ -40,14 +40,27 @@ contract Null402Pool {
     /// Spent nullifiers (double-spend / replay guard). Key = public signal[0].
     mapping(uint256 => bool) public spent;
 
+    /// Merkle roots the operator has registered as real pool roots. `settle` only
+    /// accepts a proof whose `merkleRoot` public signal is one of these — so a
+    /// proof built against a fabricated/never-deposited tree can't be settled.
+    mapping(uint256 => bool) public knownRoot;
+
+    /// BN254 scalar field (Fr) modulus. Every note commitment is a field element,
+    /// so a valid commitment is in the range (0, FR).
+    uint256 internal constant BN254_FR =
+        21888242871839275222246405745257275088548364400416034343698204186575808495617;
+
     event Deposit(uint256 indexed index, uint256 commitment, address indexed from, uint256 amount);
     event Settle(uint256 indexed nullifier, address indexed recipient, uint256 amount);
     event OperatorChanged(address indexed operator);
+    event RootRegistered(uint256 indexed root);
 
     error NotOperator();
     error ZeroAmount();
     error InvalidProof();
     error NullifierSpent();
+    error UnknownRoot();
+    error AmountMismatch();
 
     modifier onlyOperator() {
         if (msg.sender != operator) revert NotOperator();
@@ -55,6 +68,10 @@ contract Null402Pool {
     }
 
     constructor(IERC20 _token, IGroth16Verifier _verifier, address _operator) {
+        require(
+            address(_token) != address(0) && address(_verifier) != address(0) && _operator != address(0),
+            "zero addr"
+        );
         token = _token;
         verifier = _verifier;
         operator = _operator;
@@ -65,6 +82,10 @@ contract Null402Pool {
     /// witness building.
     function deposit(uint256 commitment, uint256 amount) external returns (uint256 index) {
         if (amount == 0) revert ZeroAmount();
+        // Commitment must be a valid, non-zero BN254 field element (matches the
+        // Poseidon commitment the circuit constrains). Rejects 0 and out-of-field
+        // garbage that could never correspond to a real note.
+        require(commitment != 0 && commitment < BN254_FR, "bad commitment");
         require(token.transferFrom(msg.sender, address(this), amount), "transfer failed");
         index = commitments.length;
         commitments.push(commitment);
@@ -89,14 +110,35 @@ contract Null402Pool {
         // 1) cryptographic validity
         if (!verifier.verifyProof(a, b, c, pubSignals)) revert InvalidProof();
 
-        // 2) single-use nullifier
+        // 2) the proof's Merkle root must be one the operator has registered as a
+        //    real pool root (else a proof against a fabricated tree could settle).
+        if (!knownRoot[pubSignals[1]]) revert UnknownRoot();
+
+        // 3) single-use nullifier
         uint256 nullifier = pubSignals[0];
         if (spent[nullifier]) revert NullifierSpent();
         spent[nullifier] = true;
 
-        // 3) payout
+        // 4) bind the AMOUNT to the verified proof: the operator cannot settle a
+        //    different value than the proof authorizes (requiredAmount = pubSignals[3]).
+        //    The recipient (payTo) is committed in the proof as addressToField(payTo)
+        //    = sha256("null402:payTo:"+addr) mod Fr — a hash, not recoverable to an
+        //    address on-chain — so recipient/payTo binding is enforced OFF-CHAIN by the
+        //    gateway (it checks payTo == addressToField(its own address)); on-chain the
+        //    operator is trusted to pass its own recipient.
+        if (amount != pubSignals[3]) revert AmountMismatch();
+
+        // 5) payout
         require(token.transfer(recipient, amount), "payout failed");
         emit Settle(nullifier, recipient, amount);
+    }
+
+    /// @notice Register a Merkle root as a real pool root so `settle` will accept
+    /// proofs built against it. Operator-driven: after deposits change the tree,
+    /// the operator computes the new root off-chain and registers it here.
+    function registerRoot(uint256 root) external onlyOperator {
+        knownRoot[root] = true;
+        emit RootRegistered(root);
     }
 
     // ── views ─────────────────────────────────────────────────────────────────
@@ -113,6 +155,7 @@ contract Null402Pool {
     }
 
     function setOperator(address o) external onlyOperator {
+        require(o != address(0), "zero addr");
         operator = o;
         emit OperatorChanged(o);
     }

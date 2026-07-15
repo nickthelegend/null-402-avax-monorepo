@@ -16,6 +16,7 @@ import {
   verifyPayment,
   evmVerifier,
   devVerifier,
+  poolIsSpent,
   type GateConfig,
   type Verifier,
 } from "null-402/server";
@@ -47,13 +48,30 @@ export async function privateVerify(
   terms: GatewayTerms,
 ): Promise<VerifiedPayment | Response> {
   const path = new URL(c.req.url).pathname;
+  const isDev = c.env.VERIFY_MODE === "dev";
+  const hasPayment = (c.req.header("X-PAYMENT") ?? "").trim().length > 0;
 
   // Gateway-managed roots: the operator computes recent Pool roots off-chain from
-  // on-chain deposits and lists them in KNOWN_ROOTS. Empty list = accept any
-  // non-empty root (dev only — set KNOWN_ROOTS in production).
+  // on-chain deposits and lists them in KNOWN_ROOTS.
   const knownSet = new Set(
     (c.env.KNOWN_ROOTS ?? "").split(",").map((s) => s.trim()).filter(Boolean),
   );
+
+  // Fail closed: in production, refuse to verify a payment when NO pool roots are
+  // configured. Never fall through to accepting an arbitrary root — that would
+  // let a proof against a fabricated tree pass root-binding. (The dev scaffold
+  // keeps the permissive "any non-empty root" behavior for local testing.)
+  if (hasPayment && knownSet.size === 0 && !isDev) {
+    return c.json(
+      {
+        error: "roots-unconfigured",
+        message:
+          "KNOWN_ROOTS is empty; the gateway refuses to accept any Merkle root. " +
+          "Configure KNOWN_ROOTS with the current pool root(s).",
+      },
+      503,
+    );
+  }
 
   const cfg: GateConfig = {
     requiredAmount: terms.requiredAmount,
@@ -61,7 +79,23 @@ export async function privateVerify(
     description: terms.description,
     verifier: selectVerifier(c.env),
     nullifiers: kvNullifierStore(c.env.PAYMENT_KV),
-    isKnownRoot: async (root) => (knownSet.size > 0 ? knownSet.has(root) : root.length > 0),
+    // Empty set → accept any non-empty root ONLY in dev; production requires an
+    // explicit match (and is already 503'd above when a payment is present).
+    isKnownRoot: async (root) =>
+      knownSet.size > 0 ? knownSet.has(root) : isDev ? root.length > 0 : false,
+    // Authoritative on-chain double-spend recheck (defense-in-depth) when a real
+    // Pool is configured. Skipped in dev / when POOL_CONTRACT_ID is unset.
+    ...(c.env.POOL_CONTRACT_ID && !isDev
+      ? {
+          isSpentOnChain: (nullifier: string) =>
+            poolIsSpent({
+              rpcUrl: c.env.EVM_RPC_URL,
+              chainId: c.env.EVM_CHAIN_ID ? Number(c.env.EVM_CHAIN_ID) : 43113,
+              poolContractId: c.env.POOL_CONTRACT_ID,
+              nullifier,
+            }),
+        }
+      : {}),
   };
 
   const outcome = await verifyPayment(
