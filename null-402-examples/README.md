@@ -60,7 +60,7 @@ the guarantee. (Practical privacy scales with the number of deposits.)
 | | address |
 |---|---|
 | Verifier (Groth16/BN254) | `0x0b44836dDc460f589ce4EB97f276e533A2bE6060` |
-| Pool (escrow + nullifiers) | `0x3f528ab5A5e258f75692A3A9F4441D1E54eBB511` |
+| Pool (escrow + nullifiers) | `0x39a9C4EfabEBA954545Ecb4b16Ba1d92ec46cA1C` |
 | Token (nUSD) | `0xabea27277b0189c4C054020Ea609060A9292Ee9C` |
 
 See [`../TESTING.md`](../TESTING.md) for the full test matrix.

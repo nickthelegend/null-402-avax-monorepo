@@ -22,7 +22,7 @@ PRIVATE_KEY=0x... forge script script/Deploy.s.sol --rpc-url fuji --broadcast
 ## Deployed (Fuji 43113)
 
 - Verifier `0x0b44836dDc460f589ce4EB97f276e533A2bE6060`
-- Pool `0x3f528ab5A5e258f75692A3A9F4441D1E54eBB511`
+- Pool `0x39a9C4EfabEBA954545Ecb4b16Ba1d92ec46cA1C`
 - nUSD `0xabea27277b0189c4C054020Ea609060A9292Ee9C`
 
 The original Soroban (Rust) implementation is kept for reference under

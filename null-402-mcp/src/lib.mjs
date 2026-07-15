@@ -31,7 +31,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 export const config = {
   rpcUrl: process.env.NULL402_RPC ?? "https://api.avax-test.network/ext/bc/C/rpc",
   chainId: Number(process.env.NULL402_CHAIN_ID ?? 43113),
-  poolContractId: process.env.NULL402_POOL ?? "0x3f528ab5A5e258f75692A3A9F4441D1E54eBB511",
+  poolContractId: process.env.NULL402_POOL ?? "0x39a9C4EfabEBA954545Ecb4b16Ba1d92ec46cA1C",
   verifierContractId: process.env.NULL402_VERIFIER ?? "0x0b44836dDc460f589ce4EB97f276e533A2bE6060",
   token: process.env.NULL402_TOKEN ?? "0xabea27277b0189c4C054020Ea609060A9292Ee9C",
   // Optional funder (operator) key: tops up new agent wallets with a little AVAX

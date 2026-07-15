@@ -27,7 +27,7 @@ const circ = (f) => JSON.parse(readFileSync(`${HERE}../../null-402-circuits/buil
 
 const RPC = "https://api.avax-test.network/ext/bc/C/rpc";
 const VERIFIER = "0x0b44836dDc460f589ce4EB97f276e533A2bE6060";
-const POOL = "0x3f528ab5A5e258f75692A3A9F4441D1E54eBB511";
+const POOL = "0x39a9C4EfabEBA954545Ecb4b16Ba1d92ec46cA1C";
 const TOKEN = "0xabea27277b0189c4C054020Ea609060A9292Ee9C";
 const OPERATOR_KEY = process.env.NULL402_OPERATOR_KEY;
 const RECIPIENT = "0x000000000000000000000000000000000000dEaD";

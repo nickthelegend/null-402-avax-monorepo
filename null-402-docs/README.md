@@ -51,7 +51,7 @@ settle   →  operator pays the provider from the Pool, burns the nullifier (on-
 | | address |
 |---|---|
 | Verifier (Groth16 / BN254) | [`0x0b44836dDc460f589ce4EB97f276e533A2bE6060`](https://testnet.snowtrace.io/address/0x0b44836dDc460f589ce4EB97f276e533A2bE6060) |
-| Pool (escrow + nullifiers) | [`0x3f528ab5A5e258f75692A3A9F4441D1E54eBB511`](https://testnet.snowtrace.io/address/0x3f528ab5A5e258f75692A3A9F4441D1E54eBB511) |
+| Pool (escrow + nullifiers) | [`0x39a9C4EfabEBA954545Ecb4b16Ba1d92ec46cA1C`](https://testnet.snowtrace.io/address/0x39a9C4EfabEBA954545Ecb4b16Ba1d92ec46cA1C) |
 | Token (nUSD) | [`0xabea27277b0189c4C054020Ea609060A9292Ee9C`](https://testnet.snowtrace.io/address/0xabea27277b0189c4C054020Ea609060A9292Ee9C) |
 
 The **settle** tx runs the BN254 pairing on-chain (`verify → true`), spends the

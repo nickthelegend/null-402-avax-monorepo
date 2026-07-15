@@ -14,7 +14,7 @@ import {
 } from "null-402";
 
 const VERIFIER = process.env.NULL402_VERIFIER ?? "0x0b44836dDc460f589ce4EB97f276e533A2bE6060";
-const POOL = process.env.NULL402_POOL ?? "0x3f528ab5A5e258f75692A3A9F4441D1E54eBB511";
+const POOL = process.env.NULL402_POOL ?? "0x39a9C4EfabEBA954545Ecb4b16Ba1d92ec46cA1C";
 const RPC = process.env.NULL402_RPC ?? "https://api.avax-test.network/ext/bc/C/rpc";
 const CHAIN_ID = Number(process.env.NULL402_CHAIN_ID ?? 43113);
 
